@@ -130,3 +130,54 @@ npm run lint         # oxlint 代码检查
 npm run electron:dev # Electron 开发模式
 npm run electron:build # 打包 Windows exe
 ```
+
+---
+
+## 项目文件结构（当前版本）
+
+修改代码时必须遵循此结构，新增文件放入对应目录，禁止随意创建新的顶层目录。
+
+```
+E:\workspace\TsCode/
+├── electron/                # Electron 主进程
+│   ├── main.cjs            # 主进程入口（IPC handlers, ADB 逻辑）
+│   └── preload.cjs         # preload 桥接（暴露 electronAPI）
+├── src/                     # 前端源码（React + TypeScript）
+│   ├── main.tsx            # 入口
+│   ├── App.tsx             # 路由定义
+│   ├── index.css           # 全局样式 + Tailwind 主题
+│   ├── components/         # 通用 UI 组件
+│   │   ├── Sidebar.tsx     # 侧边栏导航
+│   │   └── Header.tsx      # 顶部栏
+│   ├── layouts/            # 布局组件
+│   │   └── MainLayout.tsx  # 主布局（侧边栏 + Header + Outlet）
+│   ├── pages/              # 页面组件（每个功能一个文件）
+│   │   └── Devices.tsx     # 设备连接页（ADB 检测/安装/名片/终端）
+│   └── types/              # TypeScript 类型定义
+│       └── index.ts        # 全局接口（ElectronAPI 等）
+├── public/                  # 静态资源
+├── .opencode/skills/        # AI agent skills（ponytail 系列）
+├── AGENTS.md                # 本文件：项目开发准则
+├── README.md                # 项目说明 + 开发流程
+├── package.json             # 依赖 + 构建脚本 + electron-builder 配置
+├── vite.config.ts           # Vite 配置
+├── tsconfig.json            # TypeScript 项目引用
+├── tsconfig.app.json        # 前端 TS 配置
+└── tsconfig.node.json       # Node/Vite TS 配置
+```
+
+---
+
+## 准则五：外科手术式修改（Surgical Changes）
+
+**禁止大范围重写。每次修改必须是最小必要 diff。**
+
+1. 修改前先 `Read` 目标文件，理解上下文
+2. 用 `Edit`（精确替换）而非 `Write`（整文件覆盖），除非是新建文件
+3. 禁止"顺手"改动不相关的代码、注释、格式
+4. 禁止未经请求的重构、重命名、文件拆分/合并
+5. 新增功能 = 新增页面文件到 `src/pages/` + 在 `App.tsx` 加路由 + 在 `Sidebar.tsx` 加导航项
+6. 新增 IPC 能力 = 在 `electron/main.cjs` 加 handler + 在 `electron/preload.cjs` 暴露 + 在 `src/types/index.ts` 加类型
+7. 每个变更行必须能追溯到用户的请求，无法追溯的行不应存在
+
+违反此准则视为 bug，必须回退。
