@@ -68,6 +68,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
   const xtermRef = useRef<unknown>(null)
   const inputBuffer = useRef('')
   const cursorPos = useRef(0)
+  const sessionActive = useRef(true)
 
   useEffect(() => {
     if (!termRef.current) return
@@ -104,6 +105,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
       term.write('\x1b[32m$\x1b[0m ')
       inputBuffer.current = ''
       cursorPos.current = 0
+      sessionActive.current = true
 
       const writePrompt = () => {
         term.write('\r\x1b[32m$\x1b[0m ')
@@ -150,6 +152,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
       }
 
       term.onData((data) => {
+        if (!sessionActive.current) return
         // Ctrl+C
         if (data === '\x03') {
           const sel = term.getSelection()
@@ -216,7 +219,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
           inputBuffer.current = before + after
           cursorPos.current--
           term.write('\b' + after + ' ')
-          term.write('\x1b[' + (after.length + 1) + 'D')
+          term.write('\x1b[' + after.length + 'D')
           return
         }
         // Printable
@@ -238,7 +241,12 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
         }
       }
       const handleExit = (id: string) => {
-        if (id === shellId) term.write('\r\n\x1b[31m[session ended]\x1b[0m\r\n')
+        if (id === shellId) {
+          sessionActive.current = false
+          if (promptTimer) clearTimeout(promptTimer)
+          term.write('\r\n\x1b[31mDevice Disconnected\x1b[0m\r\n')
+          term.write('\x1b[90mPlease refresh devices and reconnect.\x1b[0m\r\n')
+        }
       }
 
       window.electronAPI.onShellData(handleData)
