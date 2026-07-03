@@ -102,18 +102,16 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       fitAddon.fit()
       xtermRef.current = term
 
-      // IME handling
+      // IME handling - track composition state
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', () => {
-          setTimeout(() => { composing.current = false }, 50)
-        })
+        textarea.addEventListener('compositionend', () => { composing.current = false })
       }
 
       const promptPrefix = ' \x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
 
-      term.write('\x1b[36madb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
+      term.write(' \x1b[36madb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
       term.write(promptPrefix)
       inputBuffer.current = ''
       cursorPos.current = 0
@@ -343,7 +341,7 @@ function Devices() {
     setLoading(false)
   }
 
-  useEffect(() => { setTimeout(() => checkAndRefresh(), 100) }, [])
+  useEffect(() => { checkAndRefresh() }, [])
 
   const handleInstall = async () => {
     setInstalling(true)

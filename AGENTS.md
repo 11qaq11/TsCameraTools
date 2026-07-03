@@ -165,7 +165,28 @@ E:\workspace\TsCode/
 │   └── types/              # TypeScript 类型定义
 │       └── index.ts        # 全局接口（ElectronAPI 等）
 ├── public/                  # 静态资源
-├── .opencode/skills/        # AI agent skills（ponytail 系列）
+├── .opencode/skills/        # AI agent skills
+│   ├── ponytail/           # 懒惰开发模式
+│   ├── ponytail-review/    # 过度工程审查
+│   ├── ponytail-audit/     # 全仓库审计
+│   ├── ponytail-debt/      # 债务台账
+│   ├── ponytail-gain/      # 收益记分牌
+│   ├── ponytail-help/      # 快速参考
+│   ├── speckit-constitution/ # 项目原则
+│   ├── speckit-specify/    # 需求规格
+│   ├── speckit-clarify/    # 需求澄清
+│   ├── speckit-plan/       # 技术方案
+│   ├── speckit-tasks/      # 任务拆解
+│   ├── speckit-implement/  # 执行实现
+│   ├── speckit-converge/   # 收敛验收
+│   ├── speckit-analyze/    # 一致性分析
+│   ├── speckit-checklist/  # 质量检查
+│   └── speckit-taskstoissues/ # 转 GitHub Issues
+├── .specify/                # Spec-Driven Development 配置
+│   ├── memory/             # 项目记忆（constitution.md）
+│   ├── templates/          # 规格/计划/任务模板
+│   └── feature.json        # 当前功能目录
+├── specs/                   # 功能规格目录
 ├── AGENTS.md                # 本文件：项目开发准则
 ├── README.md                # 项目说明 + 开发流程
 ├── package.json             # 依赖 + 构建脚本 + electron-builder 配置
@@ -173,4 +194,52 @@ E:\workspace\TsCode/
 ├── tsconfig.json            # TypeScript 项目引用
 ├── tsconfig.app.json        # 前端 TS 配置
 └── tsconfig.node.json       # Node/Vite TS 配置
+```
+
+---
+
+## Spec-Driven Development (SDD) 工作流
+
+本项目支持 Spec-Driven Development 流程，通过 skills 驱动结构化开发。
+
+### 核心流程
+
+1. **constitution** → 建立项目原则和治理规范
+2. **specify** → 定义功能需求（WHAT 和 WHY，不涉及 HOW）
+3. **clarify** → 澄清需求中的模糊点（最多 3 个问题）
+4. **plan** → 创建技术实现方案
+5. **tasks** → 生成可执行的任务拆解
+6. **implement** → 按任务顺序执行实现
+7. **converge** → 验收：检查代码是否满足所有需求
+8. **analyze** → 一致性分析：跨文档检查覆盖度
+9. **checklist** → 质量检查清单
+10. **taskstoissues** → 将任务转为 GitHub Issues
+
+### 使用方式
+
+在对话中调用对应的 skill：
+- `/speckit.constitution` - 创建/更新项目原则
+- `/speckit.specify` - 从自然语言描述创建功能规格
+- `/speckit.clarify` - 结构化澄清需求
+- `/speckit.plan` - 生成技术方案
+- `/speckit.tasks` - 生成任务拆解
+- `/speckit.implement` - 执行实现
+- `/speckit.converge` - 收敛验收
+- `/speckit.analyze` - 一致性分析
+- `/speckit.checklist` - 质量检查
+- `/speckit.taskstoissues` - 转 GitHub Issues
+
+### 文档结构
+
+```
+specs/
+└── <prefix>-<feature-name>/
+    ├── spec.md              # 功能规格
+    ├── plan.md              # 技术方案
+    ├── tasks.md             # 任务拆解
+    ├── research.md          # 研究决策
+    ├── data-model.md        # 数据模型
+    ├── quickstart.md        # 验证场景
+    ├── contracts/           # 接口契约
+    └── checklists/          # 质量检查清单
 ```
