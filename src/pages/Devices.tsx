@@ -115,11 +115,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
       if (data === '\r') {
         // Enter: send command to shell
         term.write('\r\n')
-        if (inputBuffer.current.trim()) {
-          window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
-        } else {
-          window.electronAPI.adbShellWrite(shellId, '\n')
-        }
+        window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
         inputBuffer.current = ''
       } else if (data === '\x7f' || data === '\b') {
         // Backspace
@@ -137,8 +133,6 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     const handleData = (id: string, data: string) => {
       if (id === shellId) {
         term.write(data)
-        // Show prompt after command output
-        setTimeout(() => term.write('\x1b[32m$\x1b[0m '), 50)
       }
     }
     const handleExit = (id: string) => {
