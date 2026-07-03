@@ -69,6 +69,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
   const inputBuffer = useRef('')
   const cursorPos = useRef(0)
   const sessionActive = useRef(true)
+  const composing = useRef(false)
 
   useEffect(() => {
     if (!termRef.current) return
@@ -101,9 +102,16 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       fitAddon.fit()
       xtermRef.current = term
 
+      // IME handling
+      const textarea = term.element?.querySelector('textarea')
+      if (textarea) {
+        textarea.addEventListener('compositionstart', () => { composing.current = true })
+        textarea.addEventListener('compositionend', () => { composing.current = false })
+      }
+
       const promptPrefix = '\x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
 
-      term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
+      term.write('\x1b[36madb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
       term.write(promptPrefix)
       inputBuffer.current = ''
       cursorPos.current = 0
@@ -160,6 +168,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
 
       term.onData((data) => {
         if (!sessionActive.current) return
+        if (composing.current) return
         // Ctrl+C
         if (data === '\x03') {
           const sel = term.getSelection()
@@ -319,11 +328,15 @@ function Devices() {
 
   const checkAndRefresh = async () => {
     setLoading(true)
-    const { available } = await window.electronAPI.adbCheck()
-    setAdbAvailable(available)
-    if (available) {
-      const list = await window.electronAPI.adbDevices()
-      setDevices(list)
+    try {
+      const { available } = await window.electronAPI.adbCheck()
+      setAdbAvailable(available)
+      if (available) {
+        const list = await window.electronAPI.adbDevices()
+        setDevices(list)
+      }
+    } catch {
+      setAdbAvailable(false)
     }
     setLoading(false)
   }
