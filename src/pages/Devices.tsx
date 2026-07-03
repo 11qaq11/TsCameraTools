@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Shield, HardDrive, Terminal, X, Download, AlertTriangle } from 'lucide-react'
-import { Terminal as XTerminal } from '@xterm/xterm'
-import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import type { AdbDevice } from '../types'
 
@@ -67,117 +65,151 @@ function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (seri
 
 function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: string; onClose: () => void }) {
   const termRef = useRef<HTMLDivElement>(null)
-  const xtermRef = useRef<XTerminal | null>(null)
+  const xtermRef = useRef<unknown>(null)
   const inputBuffer = useRef('')
+  const cursorPos = useRef(0)
 
   useEffect(() => {
     if (!termRef.current) return
-    const term = new XTerminal({
-      fontSize: 14,
-      fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace",
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4',
-        cursorAccent: '#1e1e1e',
-        selectionBackground: '#264f78',
-        black: '#1e1e1e',
-        red: '#f44747',
-        green: '#6a9955',
-        yellow: '#d7ba7d',
-        blue: '#569cd6',
-        magenta: '#c586c0',
-        cyan: '#4ec9b0',
-        white: '#d4d4d4',
-        brightBlack: '#808080',
-        brightRed: '#f44747',
-        brightGreen: '#6a9955',
-        brightYellow: '#d7ba7d',
-        brightBlue: '#569cd6',
-        brightMagenta: '#c586c0',
-        brightCyan: '#4ec9b0',
-        brightWhite: '#d4d4d4',
-      },
-    })
-    const fitAddon = new FitAddon()
-    term.loadAddon(fitAddon)
-    term.open(termRef.current)
-    term.focus()
-    fitAddon.fit()
-    xtermRef.current = term
 
-    term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
-    term.write('\x1b[32m$\x1b[0m ')
-
+    let term: InstanceType<typeof import('@xterm/xterm').Terminal>
+    let fitAddon: InstanceType<typeof import('@xterm/addon-fit').FitAddon>
     let promptTimer: ReturnType<typeof setTimeout> | null = null
 
-    const writePrompt = () => {
-      term.write('\r\x1b[32m$\x1b[0m ')
+    const init = async () => {
+      const { Terminal } = await import('@xterm/xterm')
+      const { FitAddon } = await import('@xterm/addon-fit')
+
+      term = new Terminal({
+        fontSize: 14,
+        fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace",
+        theme: {
+          background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4',
+          cursorAccent: '#1e1e1e', selectionBackground: '#264f78',
+          black: '#1e1e1e', red: '#f44747', green: '#6a9955', yellow: '#d7ba7d',
+          blue: '#569cd6', magenta: '#c586c0', cyan: '#4ec9b0', white: '#d4d4d4',
+          brightBlack: '#808080', brightRed: '#f44747', brightGreen: '#6a9955',
+          brightYellow: '#d7ba7d', brightBlue: '#569cd6', brightMagenta: '#c586c0',
+          brightCyan: '#4ec9b0', brightWhite: '#d4d4d4',
+        },
+      })
+      fitAddon = new FitAddon()
+      term.loadAddon(fitAddon)
+      term.open(termRef.current!)
+      term.focus()
+      fitAddon.fit()
+      xtermRef.current = term
+
+      term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
+      term.write('\x1b[32m$\x1b[0m ')
       inputBuffer.current = ''
-    }
+      cursorPos.current = 0
 
-    term.onData((data) => {
-      // Ctrl+C: copy if selection exists, otherwise send SIGINT
-      if (data === '\x03') {
-        const selection = term.getSelection()
-        if (selection) {
-          navigator.clipboard.writeText(selection)
-        } else {
+      const writePrompt = () => {
+        term.write('\r\x1b[32m$\x1b[0m ')
+        if (inputBuffer.current) term.write(inputBuffer.current)
+        cursorPos.current = inputBuffer.current.length
+      }
+
+      term.onData((data) => {
+        // Ctrl+C
+        if (data === '\x03') {
+          const sel = term.getSelection()
+          if (sel) { navigator.clipboard.writeText(sel); return }
           window.electronAPI.adbShellWrite(shellId, '\x03')
-          term.write('^C\r\n')
-          writePrompt()
+          term.write('^C\r\n\x1b[32m$\x1b[0m ')
+          inputBuffer.current = ''
+          cursorPos.current = 0
+          return
         }
-        return
-      }
-      // Ctrl+V: paste from clipboard
-      if (data === '\x16') {
-        navigator.clipboard.readText().then((text) => {
-          if (text) {
-            inputBuffer.current += text
-            term.write(text)
-            window.electronAPI.adbShellWrite(shellId, text)
-          }
-        })
-        return
-      }
-      if (data === '\r') {
-        // Enter: send command to shell
-        term.write('\r\n')
-        window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
-        inputBuffer.current = ''
-      } else if (data === '\x7f' || data === '\b') {
-        if (inputBuffer.current.length > 0) {
-          inputBuffer.current = inputBuffer.current.slice(0, -1)
-          term.write('\b \b')
+        // Ctrl+V
+        if (data === '\x16') {
+          navigator.clipboard.readText().then((t) => {
+            if (t) { inputBuffer.current += t; cursorPos.current += t.length; term.write(t) }
+          })
+          return
         }
-      } else if (data >= ' ') {
-        inputBuffer.current += data
-        term.write(data)
-      }
-    })
+        // Left arrow
+        if (data === '\x1b[D') {
+          if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }
+          return
+        }
+        // Right arrow
+        if (data === '\x1b[C') {
+          if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }
+          return
+        }
+        // Home
+        if (data === '\x1b[H') {
+          term.write('\x1b[' + cursorPos.current + 'D')
+          cursorPos.current = 0
+          return
+        }
+        // End
+        if (data === '\x1b[F') {
+          const move = inputBuffer.current.length - cursorPos.current
+          if (move > 0) term.write('\x1b[' + move + 'C')
+          cursorPos.current = inputBuffer.current.length
+          return
+        }
+        // Enter
+        if (data === '\r') {
+          term.write('\r\n')
+          window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
+          inputBuffer.current = ''
+          cursorPos.current = 0
+          return
+        }
+        // Backspace
+        if (data === '\x7f' || data === '\b') {
+          if (cursorPos.current === 0) return
+          const before = inputBuffer.current.slice(0, cursorPos.current - 1)
+          const after = inputBuffer.current.slice(cursorPos.current)
+          inputBuffer.current = before + after
+          cursorPos.current--
+          term.write('\b' + after + ' ')
+          term.write('\x1b[' + (after.length + 1) + 'D')
+          return
+        }
+        // Printable
+        if (data >= ' ') {
+          const before = inputBuffer.current.slice(0, cursorPos.current)
+          const after = inputBuffer.current.slice(cursorPos.current)
+          inputBuffer.current = before + data + after
+          cursorPos.current++
+          term.write(data + after)
+          if (after.length) term.write('\x1b[' + after.length + 'D')
+        }
+      })
 
-    const handleData = (id: string, data: string) => {
-      if (id === shellId) {
+      const handleData = (id: string, data: string) => {
+        if (id === shellId) {
+          if (promptTimer) clearTimeout(promptTimer)
+          term.write(data)
+          promptTimer = setTimeout(writePrompt, 30)
+        }
+      }
+      const handleExit = (id: string) => {
+        if (id === shellId) term.write('\r\n\x1b[31m[session ended]\x1b[0m\r\n')
+      }
+
+      window.electronAPI.onShellData(handleData)
+      window.electronAPI.onShellExit(handleExit)
+
+      const resizeObs = new ResizeObserver(() => fitAddon.fit())
+      resizeObs.observe(termRef.current!)
+
+      return () => {
         if (promptTimer) clearTimeout(promptTimer)
-        term.write(data)
-        promptTimer = setTimeout(writePrompt, 100)
+        resizeObs.disconnect()
+        term.dispose()
       }
     }
-    const handleExit = (id: string) => {
-      if (id === shellId) term.write('\r\n\x1b[31m[session ended]\x1b[0m\r\n')
-    }
 
-    window.electronAPI.onShellData(handleData)
-    window.electronAPI.onShellExit(handleExit)
+    let cleanup: (() => void) | undefined
+    init().then((fn) => { cleanup = fn })
 
-    const resizeObs = new ResizeObserver(() => fitAddon.fit())
-    resizeObs.observe(termRef.current)
-
-    return () => {
-      if (promptTimer) clearTimeout(promptTimer)
-      resizeObs.disconnect()
-      term.dispose()
-    }
+    return () => { cleanup?.() }
   }, [shellId, serial])
 
   return (
