@@ -1,20 +1,26 @@
-import type { ReactNode } from 'react'
-
-export interface NavItem {
-  id: string
-  label: string
-  icon: ReactNode
-  path: string
-  badge?: string
+export interface AdbDevice {
+  serial: string
+  model: string
 }
 
-export interface ToolPlugin {
-  id: string
-  name: string
-  description: string
-  icon: ReactNode
-  component: React.ComponentType
-  category: ToolCategory
+export interface AdbResult {
+  success: boolean
+  message: string
 }
 
-export type ToolCategory = 'camera' | 'image' | 'analysis' | 'utility'
+export interface ElectronAPI {
+  adbDevices: () => Promise<AdbDevice[]>
+  adbRoot: (serial: string) => Promise<AdbResult>
+  adbRemount: (serial: string) => Promise<AdbResult>
+  adbShellStart: (serial: string) => Promise<string>
+  adbShellWrite: (id: string, data: string) => void
+  adbShellKill: (id: string) => void
+  onShellData: (callback: (id: string, data: string) => void) => void
+  onShellExit: (callback: (id: string) => void) => void
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI
+  }
+}

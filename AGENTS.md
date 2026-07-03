@@ -109,6 +109,18 @@ For multi-step tasks, state a brief plan:
 
 ---
 
+## 准则四：编译验证（Post-Code Build）
+
+每次完成代码编写后，必须执行完整编译并打包为可执行文件：
+
+1. 运行 `npm run electron:build` 完成 TypeScript 编译 + Vite 构建 + Electron 打包
+2. 若打包失败，必须修复后重新打包直到成功
+3. 最终交付物为 `release/win-unpacked/TsCameraTools.exe`（免安装版）
+
+此步骤不可跳过，不可省略。
+
+---
+
 ## 项目构建命令
 
 ```bash
