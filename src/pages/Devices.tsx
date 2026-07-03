@@ -63,7 +63,7 @@ function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (seri
   )
 }
 
-function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: string; onClose: () => void }) {
+function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; serial: string; model: string; onClose: () => void }) {
   const termRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<unknown>(null)
   const inputBuffer = useRef('')
@@ -101,14 +101,16 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
       fitAddon.fit()
       xtermRef.current = term
 
+      const promptPrefix = '\x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
+
       term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
-      term.write('\x1b[32m$\x1b[0m ')
+      term.write(promptPrefix)
       inputBuffer.current = ''
       cursorPos.current = 0
       sessionActive.current = true
 
       const writePrompt = () => {
-        term.write('\r\x1b[32m$\x1b[0m ')
+        term.write('\r' + promptPrefix)
         if (inputBuffer.current) term.write(inputBuffer.current)
         cursorPos.current = inputBuffer.current.length
       }
@@ -129,9 +131,14 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
         const deleted = before.length - trimmed.length
         inputBuffer.current = trimmed + after
         cursorPos.current = trimmed.length
-        term.write('\x1b[' + deleted + 'D' + after + ' '.repeat(deleted))
-        term.write('\x1b[' + (after.length + deleted) + 'D' + after)
-        term.write('\x1b[' + after.length + 'D')
+        term.write('\x1b[' + deleted + 'D')
+        if (after) {
+          term.write(after + ' '.repeat(deleted))
+          term.write('\x1b[' + (after.length + deleted) + 'D' + after)
+          term.write('\x1b[' + after.length + 'D')
+        } else {
+          term.write(' '.repeat(deleted) + '\x1b[' + deleted + 'D')
+        }
       }
 
       const jumpWordLeft = () => {
@@ -158,7 +165,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
           const sel = term.getSelection()
           if (sel) { navigator.clipboard.writeText(sel); return }
           window.electronAPI.adbShellWrite(shellId, '\x03')
-          term.write('^C\r\n\x1b[32m$\x1b[0m ')
+          term.write('^C\r\n' + promptPrefix)
           inputBuffer.current = ''
           cursorPos.current = 0
           if (promptTimer) clearTimeout(promptTimer)
@@ -266,7 +273,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     init().then((fn) => { cleanup = fn })
 
     return () => { cleanup?.() }
-  }, [shellId, serial])
+  }, [shellId, serial, model])
 
   return (
     <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526' }}>
@@ -308,7 +315,7 @@ function Devices() {
   const [loading, setLoading] = useState(false)
   const [adbAvailable, setAdbAvailable] = useState<boolean | null>(null)
   const [installing, setInstalling] = useState(false)
-  const [shell, setShell] = useState<{ id: string; serial: string } | null>(null)
+  const [shell, setShell] = useState<{ id: string; serial: string; model: string } | null>(null)
 
   const checkAndRefresh = async () => {
     setLoading(true)
@@ -335,7 +342,8 @@ function Devices() {
 
   const handleConnect = async (serial: string) => {
     const id = await window.electronAPI.adbShellStart(serial)
-    if (id) setShell({ id, serial })
+    const device = devices.find((d) => d.serial === serial)
+    if (id) setShell({ id, serial, model: device?.model || serial })
   }
 
   if (adbAvailable === null) {
@@ -376,7 +384,7 @@ function Devices() {
       )}
 
       {shell && (
-        <ShellPanel shellId={shell.id} serial={shell.serial} onClose={() => setShell(null)} />
+        <ShellPanel shellId={shell.id} serial={shell.serial} model={shell.model} onClose={() => setShell(null)} />
       )}
     </div>
   )
