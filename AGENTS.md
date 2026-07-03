@@ -95,6 +95,20 @@ For multi-step tasks, state a brief plan:
 
 ---
 
+## 准则三：完成后自审（Post-Code Review）
+
+每次完成代码生成后，必须立即执行一次 ponytail-review 自审：
+
+1. 对本次生成/修改的所有代码执行 over-engineering 审查
+2. 输出格式：`<file>:L<line>: <tag> <what>. <replacement>.`
+3. Tags: `delete:` / `stdlib:` / `native:` / `yagni:` / `shrink:`
+4. 末尾给出 `net: -<N> lines possible.`（无可删则输出 `Lean already. Ship.`）
+5. 如审查发现明确的过度工程（非初始脚手架必需），立即修复后再交付
+
+此步骤不可跳过，不可省略。
+
+---
+
 ## 项目构建命令
 
 ```bash
