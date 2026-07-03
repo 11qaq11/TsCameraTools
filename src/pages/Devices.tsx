@@ -111,6 +111,44 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
         cursorPos.current = inputBuffer.current.length
       }
 
+      const clearInput = () => {
+        const len = inputBuffer.current.length
+        if (cursorPos.current < len) term.write('\x1b[' + (len - cursorPos.current) + 'C')
+        for (let i = 0; i < len; i++) term.write('\b \b')
+        inputBuffer.current = ''
+        cursorPos.current = 0
+      }
+
+      const deleteWordBack = () => {
+        if (cursorPos.current === 0) return
+        const before = inputBuffer.current.slice(0, cursorPos.current)
+        const after = inputBuffer.current.slice(cursorPos.current)
+        const trimmed = before.replace(/\S+\s*$/, '')
+        const deleted = before.length - trimmed.length
+        inputBuffer.current = trimmed + after
+        cursorPos.current = trimmed.length
+        term.write('\x1b[' + deleted + 'D' + after + ' '.repeat(deleted))
+        term.write('\x1b[' + (after.length + deleted) + 'D' + after)
+        term.write('\x1b[' + after.length + 'D')
+      }
+
+      const jumpWordLeft = () => {
+        if (cursorPos.current === 0) return
+        const before = inputBuffer.current.slice(0, cursorPos.current)
+        const match = before.match(/\S+\s*$/)
+        const jump = match ? match[0].length : 0
+        cursorPos.current -= jump
+        term.write('\x1b[' + jump + 'D')
+      }
+
+      const jumpWordRight = () => {
+        const after = inputBuffer.current.slice(cursorPos.current)
+        const match = after.match(/^\s*\S+/)
+        const jump = match ? match[0].length : 0
+        cursorPos.current += jump
+        term.write('\x1b[' + jump + 'C')
+      }
+
       term.onData((data) => {
         // Ctrl+C
         if (data === '\x03') {
@@ -120,6 +158,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
           term.write('^C\r\n\x1b[32m$\x1b[0m ')
           inputBuffer.current = ''
           cursorPos.current = 0
+          if (promptTimer) clearTimeout(promptTimer)
           return
         }
         // Ctrl+V
@@ -129,35 +168,44 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
           })
           return
         }
+        // Ctrl+A - home
+        if (data === '\x01') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
+        // Ctrl+E - end
+        if (data === '\x05') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
+        // Ctrl+U - delete to start
+        if (data === '\x15') { clearInput(); return }
+        // Ctrl+K - delete to end
+        if (data === '\x0b') {
+          const del = inputBuffer.current.length - cursorPos.current
+          for (let i = 0; i < del; i++) term.write(' ')
+          term.write('\x1b[' + del + 'D')
+          inputBuffer.current = inputBuffer.current.slice(0, cursorPos.current)
+          return
+        }
+        // Ctrl+W - delete word back
+        if (data === '\x17') { deleteWordBack(); return }
+        // Ctrl+L - clear screen
+        if (data === '\x0c') { term.write('\x1b[2J\x1b[H\x1b[32m$\x1b[0m ' + inputBuffer.current); cursorPos.current = inputBuffer.current.length; return }
+        // Ctrl+Left - jump word left
+        if (data === '\x1b[1;5D') { jumpWordLeft(); return }
+        // Ctrl+Right - jump word right
+        if (data === '\x1b[1;5C') { jumpWordRight(); return }
         // Left arrow
-        if (data === '\x1b[D') {
-          if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }
-          return
-        }
+        if (data === '\x1b[D') { if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }; return }
         // Right arrow
-        if (data === '\x1b[C') {
-          if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }
-          return
-        }
+        if (data === '\x1b[C') { if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }; return }
         // Home
-        if (data === '\x1b[H') {
-          term.write('\x1b[' + cursorPos.current + 'D')
-          cursorPos.current = 0
-          return
-        }
+        if (data === '\x1b[H') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
         // End
-        if (data === '\x1b[F') {
-          const move = inputBuffer.current.length - cursorPos.current
-          if (move > 0) term.write('\x1b[' + move + 'C')
-          cursorPos.current = inputBuffer.current.length
-          return
-        }
+        if (data === '\x1b[F') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
         // Enter
         if (data === '\r') {
           term.write('\r\n')
           window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
           inputBuffer.current = ''
           cursorPos.current = 0
+          if (promptTimer) clearTimeout(promptTimer)
+          promptTimer = setTimeout(writePrompt, 50)
           return
         }
         // Backspace
