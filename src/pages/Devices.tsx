@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { RefreshCw, Shield, HardDrive, Terminal, X } from 'lucide-react'
+import { RefreshCw, Shield, HardDrive, Terminal, X, Download, AlertTriangle } from 'lucide-react'
 import { Terminal as XTerminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -79,16 +79,14 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     xtermRef.current = term
 
     term.onData((data) => {
-      window.electronAPI.adbShellWrite(shellId, data)
+      window.electronAPI.adbShellWrite(shellId, data.replace(/\r/g, '\n'))
     })
 
     const handleData = (id: string, data: string) => {
       if (id === shellId) term.write(data)
     }
     const handleExit = (id: string) => {
-      if (id === shellId) {
-        term.write('\r\n[session ended]\r\n')
-      }
+      if (id === shellId) term.write('\r\n[session ended]\r\n')
     }
 
     window.electronAPI.onShellData(handleData)
@@ -119,23 +117,65 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
   )
 }
 
+function AdbNotFound({ onInstall, installing }: { onInstall: () => void; installing: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 py-16">
+      <AlertTriangle size={36} className="mb-3 text-amber-500" />
+      <p className="text-sm font-medium text-text-primary">未检测到 ADB 程序</p>
+      <p className="mt-1 text-xs text-text-secondary">需要安装 Android Platform Tools 才能连接设备</p>
+      <button
+        onClick={onInstall}
+        disabled={installing}
+        className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+      >
+        <Download size={16} className={installing ? 'animate-bounce' : ''} />
+        {installing ? '正在安装...' : '一键安装 ADB'}
+      </button>
+    </div>
+  )
+}
+
 function Devices() {
   const [devices, setDevices] = useState<AdbDevice[]>([])
   const [loading, setLoading] = useState(false)
+  const [adbAvailable, setAdbAvailable] = useState<boolean | null>(null)
+  const [installing, setInstalling] = useState(false)
   const [shell, setShell] = useState<{ id: string; serial: string } | null>(null)
 
-  const refresh = async () => {
+  const checkAndRefresh = async () => {
     setLoading(true)
-    const list = await window.electronAPI.adbDevices()
-    setDevices(list)
+    const { available } = await window.electronAPI.adbCheck()
+    setAdbAvailable(available)
+    if (available) {
+      const list = await window.electronAPI.adbDevices()
+      setDevices(list)
+    }
     setLoading(false)
   }
 
-  useEffect(() => { refresh() }, [])
+  useEffect(() => { checkAndRefresh() }, [])
+
+  const handleInstall = async () => {
+    setInstalling(true)
+    const res = await window.electronAPI.adbInstall()
+    setInstalling(false)
+    if (res.success) {
+      setAdbAvailable(true)
+      checkAndRefresh()
+    }
+  }
 
   const handleConnect = async (serial: string) => {
     const id = await window.electronAPI.adbShellStart(serial)
-    setShell({ id, serial })
+    if (id) setShell({ id, serial })
+  }
+
+  if (adbAvailable === null) {
+    return <div className="flex items-center justify-center py-16 text-sm text-text-secondary">检测中...</div>
+  }
+
+  if (!adbAvailable) {
+    return <AdbNotFound onInstall={handleInstall} installing={installing} />
   }
 
   return (
@@ -145,7 +185,7 @@ function Devices() {
           {devices.length > 0 ? `已检测到 ${devices.length} 个设备` : '未检测到设备'}
         </p>
         <button
-          onClick={refresh}
+          onClick={checkAndRefresh}
           disabled={loading}
           className="flex items-center gap-2 rounded-lg border border-border bg-card-bg px-3 py-2 text-sm font-medium text-text-primary hover:bg-content-bg disabled:opacity-50"
         >
@@ -163,7 +203,7 @@ function Devices() {
       {devices.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-16">
           <HardDrive size={32} className="mb-3 text-text-secondary" />
-          <p className="text-sm text-text-secondary">请连接 Android 设备并确保 ADB 已启用</p>
+          <p className="text-sm text-text-secondary">请连接 Android 设备并确保 USB 调试已开启</p>
         </div>
       )}
 
