@@ -158,7 +158,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
   }, [shellId, serial])
 
   return (
-    <div className="flex flex-col rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526', height: '50vh', maxHeight: '600px' }}>
+    <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526' }}>
       <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-2" style={{ background: '#333333' }}>
         <span className="text-xs font-medium font-mono" style={{ color: '#cccccc' }}>adb -s {serial} shell</span>
         <button
@@ -236,7 +236,7 @@ function Devices() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full gap-6 pb-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">
           {devices.length > 0 ? `已检测到 ${devices.length} 个设备` : '未检测到设备'}
