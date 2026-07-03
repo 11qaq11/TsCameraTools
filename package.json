@@ -41,7 +41,7 @@
     "appId": "com.thundersoft.tscameratools",
     "productName": "TsCameraTools",
     "directories": {
-      "output": "release"
+      "output": "build-output"
     },
     "files": [
       "dist/**/*",
