@@ -63,19 +63,17 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 ### 3. Surgical Changes
 
-**Touch only what you must. Clean up only your own mess.**
+**禁止大范围重写。每次修改必须是最小必要 diff。**
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+1. 修改前先 `Read` 目标文件，理解上下文
+2. 用 `Edit`（精确替换）而非 `Write`（整文件覆盖），除非是新建文件
+3. 禁止"顺手"改动不相关的代码、注释、格式
+4. 禁止未经请求的重构、重命名、文件拆分/合并
+5. 新增功能 = 新增页面文件到 `src/pages/` + 在 `App.tsx` 加路由 + 在 `Sidebar.tsx` 加导航项
+6. 新增 IPC 能力 = 在 `electron/main.cjs` 加 handler + 在 `electron/preload.cjs` 暴露 + 在 `src/types/index.ts` 加类型
+7. 每个变更行必须能追溯到用户的请求，无法追溯的行不应存在
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
+违反此准则视为 bug，必须回退。
 
 ### 4. Goal-Driven Execution
 
@@ -165,19 +163,3 @@ E:\workspace\TsCode/
 ├── tsconfig.app.json        # 前端 TS 配置
 └── tsconfig.node.json       # Node/Vite TS 配置
 ```
-
----
-
-## 准则五：外科手术式修改（Surgical Changes）
-
-**禁止大范围重写。每次修改必须是最小必要 diff。**
-
-1. 修改前先 `Read` 目标文件，理解上下文
-2. 用 `Edit`（精确替换）而非 `Write`（整文件覆盖），除非是新建文件
-3. 禁止"顺手"改动不相关的代码、注释、格式
-4. 禁止未经请求的重构、重命名、文件拆分/合并
-5. 新增功能 = 新增页面文件到 `src/pages/` + 在 `App.tsx` 加路由 + 在 `Sidebar.tsx` 加导航项
-6. 新增 IPC 能力 = 在 `electron/main.cjs` 加 handler + 在 `electron/preload.cjs` 暴露 + 在 `src/types/index.ts` 加类型
-7. 每个变更行必须能追溯到用户的请求，无法追溯的行不应存在
-
-违反此准则视为 bug，必须回退。
