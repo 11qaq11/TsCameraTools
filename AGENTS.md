@@ -112,8 +112,12 @@ For multi-step tasks, state a brief plan:
 每次完成代码编写后，必须执行完整编译并打包为可执行文件：
 
 1. 运行 `npm run electron:build` 完成 TypeScript 编译 + Vite 构建 + Electron 打包
-2. 若打包失败，必须修复后重新打包直到成功
-3. 最终交付物为 `release/win-unpacked/TsCameraTools.exe`（免安装版）
+2. 若打包失败，按以下流程处理：
+   - 第一步：杀死所有 TsCameraTools 进程（`Get-Process -Name "TsCameraTools" | Stop-Process -Force`）
+   - 第二步：等待 3 秒后重试 `npm run electron:build`
+   - 最多重试 3 次，每次重试前都先杀进程
+   - 若 3 次全部失败，立即停止并向用户反馈错误信息，不要尝试其他打包方案
+3. 最终交付物为 `build-output/win-unpacked/TsCameraTools.exe`（免安装版）
 
 此步骤不可跳过，不可省略。
 
