@@ -158,7 +158,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
   }, [shellId, serial])
 
   return (
-    <div className="flex flex-col rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526' }}>
+    <div className="flex flex-col rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526', height: '50vh', maxHeight: '600px' }}>
       <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-2" style={{ background: '#333333' }}>
         <span className="text-xs font-medium font-mono" style={{ color: '#cccccc' }}>adb -s {serial} shell</span>
         <button
@@ -169,7 +169,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
           <X size={14} />
         </button>
       </div>
-      <div ref={termRef} className="flex-1 min-h-[300px]" style={{ background: '#1e1e1e' }} />
+      <div ref={termRef} className="flex-1" style={{ background: '#1e1e1e' }} />
     </div>
   )
 }
