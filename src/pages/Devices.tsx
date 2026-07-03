@@ -107,24 +107,50 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     xtermRef.current = term
 
     term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
-    term.write('\x1b[90m Note: adb shell runs in pipe mode. Input is echoed locally.\x1b[0m\r\n')
-    term.write('\x1b[90m Commands execute on Enter. Output appears below.\x1b[0m\r\n\r\n')
     term.write('\x1b[32m$\x1b[0m ')
 
+    let promptTimer: ReturnType<typeof setTimeout> | null = null
+
+    const writePrompt = () => {
+      term.write('\r\x1b[32m$\x1b[0m ')
+      inputBuffer.current = ''
+    }
+
     term.onData((data) => {
+      // Ctrl+C: copy if selection exists, otherwise send SIGINT
+      if (data === '\x03') {
+        const selection = term.getSelection()
+        if (selection) {
+          navigator.clipboard.writeText(selection)
+        } else {
+          window.electronAPI.adbShellWrite(shellId, '\x03')
+          term.write('^C\r\n')
+          writePrompt()
+        }
+        return
+      }
+      // Ctrl+V: paste from clipboard
+      if (data === '\x16') {
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            inputBuffer.current += text
+            term.write(text)
+            window.electronAPI.adbShellWrite(shellId, text)
+          }
+        })
+        return
+      }
       if (data === '\r') {
         // Enter: send command to shell
         term.write('\r\n')
         window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
         inputBuffer.current = ''
       } else if (data === '\x7f' || data === '\b') {
-        // Backspace
         if (inputBuffer.current.length > 0) {
           inputBuffer.current = inputBuffer.current.slice(0, -1)
           term.write('\b \b')
         }
       } else if (data >= ' ') {
-        // Printable character: echo locally
         inputBuffer.current += data
         term.write(data)
       }
@@ -132,7 +158,9 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
 
     const handleData = (id: string, data: string) => {
       if (id === shellId) {
+        if (promptTimer) clearTimeout(promptTimer)
         term.write(data)
+        promptTimer = setTimeout(writePrompt, 100)
       }
     }
     const handleExit = (id: string) => {
@@ -146,6 +174,7 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     resizeObs.observe(termRef.current)
 
     return () => {
+      if (promptTimer) clearTimeout(promptTimer)
       resizeObs.disconnect()
       term.dispose()
     }
