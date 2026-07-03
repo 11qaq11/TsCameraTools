@@ -116,7 +116,14 @@ For multi-step tasks, state a brief plan:
    - 第一步：杀死所有 TsCameraTools 进程（`Get-Process -Name "TsCameraTools" | Stop-Process -Force`）
    - 第二步：等待 3 秒后重试 `npm run electron:build`
    - 最多重试 3 次，每次重试前都先杀进程
-   - 若 3 次全部失败，立即停止并向用户反馈错误信息，不要尝试其他打包方案
+   - 若 3 次全部失败，使用 Sysinternals handle64 定位锁定进程并杀死：
+     ```
+     Invoke-WebRequest -Uri "https://live.sysinternals.com/handle64.exe" -OutFile "$env:TEMP\handle64.exe"
+     & "$env:TEMP\handle64.exe" "E:\workspace\TsCode\release" -accepteula
+     Stop-Process -Id <PID> -Force
+     ```
+   - 杀死锁定进程后重试打包
+   - 若仍失败，立即停止并向用户反馈错误信息，不要尝试其他打包方案
 3. 最终交付物为 `release/win-unpacked/TsCameraTools.exe`（免安装版）
 
 此步骤不可跳过，不可省略。
