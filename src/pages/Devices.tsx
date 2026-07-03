@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Shield, HardDrive, Terminal, X, Download, AlertTriangle } from 'lucide-react'
 import '@xterm/xterm/css/xterm.css'
 import type { AdbDevice } from '../types'
+import { info, error } from '../utils/logger'
 
 function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (serial: string) => void }) {
   const [status, setStatus] = useState('')
@@ -70,6 +71,16 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
   const cursorPos = useRef(0)
   const sessionActive = useRef(true)
   const composing = useRef(false)
+  
+  // Command history
+  const commandHistory = useRef<string[]>([])
+  const historyIndex = useRef(-1)
+  const currentInput = useRef('')
+  
+  // Search mode
+  const searchMode = useRef(false)
+  const searchQuery = useRef('')
+  const searchResult = useRef('')
 
   useEffect(() => {
     if (!termRef.current) return
@@ -106,12 +117,15 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', () => { composing.current = false })
+        textarea.addEventListener('compositionend', () => {
+          // Delay clearing composing flag to prevent duplicate input
+          setTimeout(() => { composing.current = false }, 50)
+        })
       }
 
       const promptPrefix = ' \x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
 
-      term.write(' \x1b[36madb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
+      term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
       term.write(promptPrefix)
       inputBuffer.current = ''
       cursorPos.current = 0
@@ -129,6 +143,79 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
         for (let i = 0; i < len; i++) term.write('\b \b')
         inputBuffer.current = ''
         cursorPos.current = 0
+      }
+
+      // Load command history from file
+      const loadHistory = async () => {
+        try {
+          const result = await window.electronAPI.loadHistory()
+          if (result.success && result.history) {
+            commandHistory.current = result.history
+            info('ShellPanel', 'History loaded:', { count: result.history.length })
+          }
+        } catch (err) {
+          error('ShellPanel', 'Failed to load history:', err)
+        }
+      }
+
+      // Save command history to file
+      const saveHistory = async () => {
+        try {
+          await window.electronAPI.saveHistory(commandHistory.current)
+          info('ShellPanel', 'History saved:', { count: commandHistory.current.length })
+        } catch (err) {
+          error('ShellPanel', 'Failed to save history:', err)
+        }
+      }
+
+      // Load history on init
+      await loadHistory()
+
+      // Search helper functions
+      const findInHistory = (query: string): string => {
+        if (!query) return ''
+        for (let i = commandHistory.current.length - 1; i >= 0; i--) {
+          if (commandHistory.current[i].includes(query)) {
+            return commandHistory.current[i]
+          }
+        }
+        return ''
+      }
+
+      const updateSearchDisplay = () => {
+        term.write('\r\x1b[K(reverse-i-search)\'' + searchQuery.current + '\': ' + searchResult.current)
+      }
+
+      const enterSearchMode = () => {
+        searchMode.current = true
+        searchQuery.current = ''
+        searchResult.current = ''
+        term.write('\r\x1b[K(reverse-i-search)\': ')
+      }
+
+      const exitSearchMode = (execute: boolean = false) => {
+        searchMode.current = false
+        if (execute && searchResult.current) {
+          inputBuffer.current = searchResult.current
+          cursorPos.current = searchResult.current.length
+          term.write('\r\n')
+          window.electronAPI.adbShellWrite(shellId, searchResult.current + '\n')
+          // Add to history
+          const cmd = searchResult.current.trim()
+          if (cmd && (commandHistory.current.length === 0 || commandHistory.current[commandHistory.current.length - 1] !== cmd)) {
+            commandHistory.current.push(cmd)
+            if (commandHistory.current.length > 300) commandHistory.current.shift()
+            saveHistory()
+          }
+          historyIndex.current = -1
+          currentInput.current = ''
+          if (promptTimer) clearTimeout(promptTimer)
+          promptTimer = setTimeout(writePrompt, 50)
+        } else {
+          term.write('\r\n' + promptPrefix + inputBuffer.current)
+        }
+        searchQuery.current = ''
+        searchResult.current = ''
       }
 
       const deleteWordBack = () => {
@@ -169,6 +256,40 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       term.onData((data) => {
         if (!sessionActive.current) return
         if (composing.current) return
+        
+        // Search mode handling
+        if (searchMode.current) {
+          if (data === '\r') {  // Enter - execute matched command
+            exitSearchMode(true)
+            return
+          }
+          if (data === '\x1b') {  // Esc - cancel search
+            exitSearchMode(false)
+            return
+          }
+          if (data === '\x7f' || data === '\b') {  // Backspace
+            if (searchQuery.current.length > 0) {
+              searchQuery.current = searchQuery.current.slice(0, -1)
+              searchResult.current = findInHistory(searchQuery.current)
+              updateSearchDisplay()
+            }
+            return
+          }
+          if (data >= ' ') {
+            searchQuery.current += data
+            searchResult.current = findInHistory(searchQuery.current)
+            updateSearchDisplay()
+            return
+          }
+          return
+        }
+        
+        // Ctrl+R - enter search mode
+        if (data === '\x12') {
+          enterSearchMode()
+          return
+        }
+        
         // Ctrl+C
         if (data === '\x03') {
           const sel = term.getSelection()
@@ -213,12 +334,58 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
         if (data === '\x1b[D') { if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }; return }
         // Right arrow
         if (data === '\x1b[C') { if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }; return }
+        // Up arrow - history navigation
+        if (data === '\x1b[A') {
+          if (commandHistory.current.length === 0) return
+          if (historyIndex.current === -1) {
+            currentInput.current = inputBuffer.current
+            historyIndex.current = commandHistory.current.length - 1
+          } else if (historyIndex.current > 0) {
+            historyIndex.current--
+          }
+          clearInput()
+          const cmd = commandHistory.current[historyIndex.current]
+          inputBuffer.current = cmd
+          cursorPos.current = cmd.length
+          term.write(cmd)
+          return
+        }
+        // Down arrow - history navigation
+        if (data === '\x1b[B') {
+          if (historyIndex.current === -1) return
+          if (historyIndex.current < commandHistory.current.length - 1) {
+            historyIndex.current++
+            clearInput()
+            const cmd = commandHistory.current[historyIndex.current]
+            inputBuffer.current = cmd
+            cursorPos.current = cmd.length
+            term.write(cmd)
+          } else {
+            historyIndex.current = -1
+            clearInput()
+            inputBuffer.current = currentInput.current
+            cursorPos.current = currentInput.current.length
+            term.write(currentInput.current)
+          }
+          return
+        }
         // Home
         if (data === '\x1b[H') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
         // End
         if (data === '\x1b[F') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
         // Enter
         if (data === '\r') {
+          const cmd = inputBuffer.current.trim()
+          // Add to history (skip empty and consecutive duplicates)
+          if (cmd && (commandHistory.current.length === 0 || commandHistory.current[commandHistory.current.length - 1] !== cmd)) {
+            commandHistory.current.push(cmd)
+            if (commandHistory.current.length > 300) {
+              commandHistory.current.shift()
+            }
+            saveHistory()
+          }
+          historyIndex.current = -1
+          currentInput.current = ''
           term.write('\r\n')
           window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
           inputBuffer.current = ''
@@ -328,20 +495,32 @@ function Devices() {
 
   const checkAndRefresh = async () => {
     setLoading(true)
+    info('Devices', 'Starting ADB check...')
     try {
       const { available } = await window.electronAPI.adbCheck()
+      info('Devices', 'ADB check result:', { available })
       setAdbAvailable(available)
       if (available) {
+        info('Devices', 'Fetching devices...')
         const list = await window.electronAPI.adbDevices()
+        info('Devices', 'Devices found:', { count: list.length, devices: list })
         setDevices(list)
       }
-    } catch {
+    } catch (err) {
+      error('Devices', 'ADB check failed:', err)
       setAdbAvailable(false)
     }
     setLoading(false)
   }
 
-  useEffect(() => { checkAndRefresh() }, [])
+  useEffect(() => {
+    info('Devices', 'Component mounted, scheduling ADB check...')
+    const timer = setTimeout(() => {
+      info('Devices', 'Executing ADB check...')
+      checkAndRefresh()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleInstall = async () => {
     setInstalling(true)

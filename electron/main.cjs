@@ -9,6 +9,18 @@ let mainWindow
 
 const ADB_DIR = path.join(app.getPath('userData'), 'platform-tools')
 const ADB_EXE = path.join(ADB_DIR, 'adb.exe')
+const LOGS_DIR = path.join(process.cwd(), 'logs')
+
+// Ensure logs directory exists
+if (!fs.existsSync(LOGS_DIR)) {
+  fs.mkdirSync(LOGS_DIR, { recursive: true })
+}
+
+function getLogFilePath() {
+  const now = new Date()
+  const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  return path.join(LOGS_DIR, `${timestamp}.log`)
+}
 
 function getAdbPath() {
   try {
@@ -185,6 +197,43 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
 ipcMain.on('adb:shell:kill', (_event, id) => {
   const proc = shells.get(id)
   if (proc) { proc.kill(); shells.delete(id) }
+})
+
+// History: load from file
+ipcMain.handle('history:load', async () => {
+  const historyPath = path.join(process.cwd(), '.adb-command-history.json')
+  try {
+    if (fs.existsSync(historyPath)) {
+      const data = fs.readFileSync(historyPath, 'utf-8')
+      const parsed = JSON.parse(data)
+      return { success: true, history: parsed.history || [] }
+    }
+    return { success: true, history: [] }
+  } catch (e) {
+    return { success: false, history: [], message: e.message }
+  }
+})
+
+// History: save to file
+ipcMain.handle('history:save', async (_event, history) => {
+  const historyPath = path.join(process.cwd(), '.adb-command-history.json')
+  try {
+    fs.writeFileSync(historyPath, JSON.stringify({ history, version: 1 }, null, 2))
+    return { success: true }
+  } catch (e) {
+    return { success: false, message: e.message }
+  }
+})
+
+// Log: write to file
+ipcMain.handle('log:write', async (_event, message) => {
+  try {
+    const logFile = getLogFilePath()
+    fs.appendFileSync(logFile, message + '\n')
+    return { success: true }
+  } catch (e) {
+    return { success: false, message: e.message }
+  }
 })
 
 app.whenReady().then(createWindow)

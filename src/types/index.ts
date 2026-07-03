@@ -8,6 +8,12 @@ export interface AdbResult {
   message: string
 }
 
+export interface HistoryResult {
+  success: boolean
+  history: string[]
+  message?: string
+}
+
 export interface ElectronAPI {
   adbCheck: () => Promise<{ available: boolean }>
   adbInstall: () => Promise<AdbResult>
@@ -19,6 +25,9 @@ export interface ElectronAPI {
   adbShellKill: (id: string) => void
   onShellData: (callback: (id: string, data: string) => void) => void
   onShellExit: (callback: (id: string) => void) => void
+  loadHistory: () => Promise<HistoryResult>
+  saveHistory: (history: string[]) => Promise<AdbResult>
+  writeLog: (message: string) => Promise<AdbResult>
 }
 
 declare global {

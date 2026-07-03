@@ -19,4 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('adb:shell:exit')
     ipcRenderer.on('adb:shell:exit', handler)
   },
+  loadHistory: () => ipcRenderer.invoke('history:load'),
+  saveHistory: (history) => ipcRenderer.invoke('history:save', history),
+  writeLog: (message) => ipcRenderer.invoke('log:write', message),
 })
