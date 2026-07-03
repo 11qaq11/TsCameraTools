@@ -106,10 +106,12 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', () => { composing.current = false })
+        textarea.addEventListener('compositionend', () => {
+          setTimeout(() => { composing.current = false }, 50)
+        })
       }
 
-      const promptPrefix = '\x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
+      const promptPrefix = ' \x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
 
       term.write('\x1b[36madb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
       term.write(promptPrefix)
@@ -341,7 +343,7 @@ function Devices() {
     setLoading(false)
   }
 
-  useEffect(() => { checkAndRefresh() }, [])
+  useEffect(() => { setTimeout(() => checkAndRefresh(), 100) }, [])
 
   const handleInstall = async () => {
     setInstalling(true)

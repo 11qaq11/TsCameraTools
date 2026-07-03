@@ -26,12 +26,15 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'TsCameraTools',
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs'),
     },
   })
+
+  mainWindow.once('ready-to-show', () => { mainWindow.show() })
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
