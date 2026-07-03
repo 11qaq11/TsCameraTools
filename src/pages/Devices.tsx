@@ -75,11 +75,15 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     term.open(termRef.current)
+    term.focus()
     fitAddon.fit()
     xtermRef.current = term
 
+    term.write('adb shell connected. Type commands and press Enter.\r\n')
+    term.write('Note: input is not echoed. Output appears after Enter.\r\n\r\n')
+
     term.onData((data) => {
-      window.electronAPI.adbShellWrite(shellId, data.replace(/\r/g, '\n'))
+      window.electronAPI.adbShellWrite(shellId, data)
     })
 
     const handleData = (id: string, data: string) => {

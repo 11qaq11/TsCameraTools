@@ -140,20 +140,24 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
   const adb = getAdbPath()
   if (!adb) return null
   const id = `${serial}-${Date.now()}`
+
   const proc = spawn(adb, ['-s', serial, 'shell'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: process.env,
+    windowsHide: false,
   })
   shells.set(id, proc)
 
+  proc.stdout.setEncoding('utf-8')
+  proc.stderr.setEncoding('utf-8')
+
   proc.stdout.on('data', (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('adb:shell:data', id, data.toString())
+      mainWindow.webContents.send('adb:shell:data', id, data)
     }
   })
   proc.stderr.on('data', (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('adb:shell:data', id, data.toString())
+      mainWindow.webContents.send('adb:shell:data', id, data)
     }
   })
   proc.on('close', () => {
@@ -163,12 +167,16 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
     }
   })
 
+  // Trigger initial prompt
+  proc.stdin.write('\n')
   return id
 })
 
 ipcMain.on('adb:shell:write', (_event, id, data) => {
   const proc = shells.get(id)
-  if (proc && proc.stdin.writable) proc.stdin.write(data)
+  if (proc && proc.stdin && !proc.stdin.destroyed) {
+    proc.stdin.write(data.replace(/\r/g, '\n'))
+  }
 })
 
 ipcMain.on('adb:shell:kill', (_event, id) => {
