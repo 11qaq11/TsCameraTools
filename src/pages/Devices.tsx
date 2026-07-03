@@ -68,10 +68,37 @@ function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (seri
 function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: string; onClose: () => void }) {
   const termRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<XTerminal | null>(null)
+  const inputBuffer = useRef('')
 
   useEffect(() => {
     if (!termRef.current) return
-    const term = new XTerminal({ fontSize: 13, theme: { background: '#1e293b' } })
+    const term = new XTerminal({
+      fontSize: 14,
+      fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace",
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4',
+        cursor: '#d4d4d4',
+        cursorAccent: '#1e1e1e',
+        selectionBackground: '#264f78',
+        black: '#1e1e1e',
+        red: '#f44747',
+        green: '#6a9955',
+        yellow: '#d7ba7d',
+        blue: '#569cd6',
+        magenta: '#c586c0',
+        cyan: '#4ec9b0',
+        white: '#d4d4d4',
+        brightBlack: '#808080',
+        brightRed: '#f44747',
+        brightGreen: '#6a9955',
+        brightYellow: '#d7ba7d',
+        brightBlue: '#569cd6',
+        brightMagenta: '#c586c0',
+        brightCyan: '#4ec9b0',
+        brightWhite: '#d4d4d4',
+      },
+    })
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     term.open(termRef.current)
@@ -79,18 +106,43 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
     fitAddon.fit()
     xtermRef.current = term
 
-    term.write('adb shell connected. Type commands and press Enter.\r\n')
-    term.write('Note: input is not echoed. Output appears after Enter.\r\n\r\n')
+    term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
+    term.write('\x1b[90m Note: adb shell runs in pipe mode. Input is echoed locally.\x1b[0m\r\n')
+    term.write('\x1b[90m Commands execute on Enter. Output appears below.\x1b[0m\r\n\r\n')
+    term.write('\x1b[32m$\x1b[0m ')
 
     term.onData((data) => {
-      window.electronAPI.adbShellWrite(shellId, data)
+      if (data === '\r') {
+        // Enter: send command to shell
+        term.write('\r\n')
+        if (inputBuffer.current.trim()) {
+          window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
+        } else {
+          window.electronAPI.adbShellWrite(shellId, '\n')
+        }
+        inputBuffer.current = ''
+      } else if (data === '\x7f' || data === '\b') {
+        // Backspace
+        if (inputBuffer.current.length > 0) {
+          inputBuffer.current = inputBuffer.current.slice(0, -1)
+          term.write('\b \b')
+        }
+      } else if (data >= ' ') {
+        // Printable character: echo locally
+        inputBuffer.current += data
+        term.write(data)
+      }
     })
 
     const handleData = (id: string, data: string) => {
-      if (id === shellId) term.write(data)
+      if (id === shellId) {
+        term.write(data)
+        // Show prompt after command output
+        setTimeout(() => term.write('\x1b[32m$\x1b[0m '), 50)
+      }
     }
     const handleExit = (id: string) => {
-      if (id === shellId) term.write('\r\n[session ended]\r\n')
+      if (id === shellId) term.write('\r\n\x1b[31m[session ended]\x1b[0m\r\n')
     }
 
     window.electronAPI.onShellData(handleData)
@@ -103,20 +155,21 @@ function ShellPanel({ shellId, serial, onClose }: { shellId: string; serial: str
       resizeObs.disconnect()
       term.dispose()
     }
-  }, [shellId])
+  }, [shellId, serial])
 
   return (
-    <div className="flex flex-col rounded-xl border border-border bg-card-bg overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-xs font-medium text-text-primary font-mono">adb -s {serial} shell</span>
+    <div className="flex flex-col rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526' }}>
+      <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-2" style={{ background: '#333333' }}>
+        <span className="text-xs font-medium font-mono" style={{ color: '#cccccc' }}>adb -s {serial} shell</span>
         <button
           onClick={() => { window.electronAPI.adbShellKill(shellId); onClose() }}
-          className="rounded p-1 text-text-secondary hover:text-accent-red"
+          className="rounded p-1 hover:bg-[#c42b1c]"
+          style={{ color: '#cccccc' }}
         >
           <X size={14} />
         </button>
       </div>
-      <div ref={termRef} className="flex-1 min-h-[300px]" />
+      <div ref={termRef} className="flex-1 min-h-[300px]" style={{ background: '#1e1e1e' }} />
     </div>
   )
 }
