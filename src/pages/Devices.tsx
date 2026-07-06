@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { RefreshCw, Shield, HardDrive, Terminal, X, Download, AlertTriangle } from 'lucide-react'
 import '@xterm/xterm/css/xterm.css'
 import type { AdbDevice } from '../types'
-import { info, error } from '../utils/logger'
+import { logger } from '../utils/logger'
 
 function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (serial: string) => void }) {
   const [status, setStatus] = useState('')
@@ -151,10 +151,10 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           const result = await window.electronAPI.loadHistory()
           if (result.success && result.history) {
             commandHistory.current = result.history
-            info('ShellPanel', 'History loaded:', { count: result.history.length })
+            logger.info('ShellPanel', 'History loaded:', { count: result.history.length })
           }
         } catch (err) {
-          error('ShellPanel', 'Failed to load history:', err)
+          logger.error('ShellPanel', 'Failed to load history:', err)
         }
       }
 
@@ -162,9 +162,9 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       const saveHistory = async () => {
         try {
           await window.electronAPI.saveHistory(commandHistory.current)
-          info('ShellPanel', 'History saved:', { count: commandHistory.current.length })
+          logger.info('ShellPanel', 'History saved:', { count: commandHistory.current.length })
         } catch (err) {
-          error('ShellPanel', 'Failed to save history:', err)
+          logger.error('ShellPanel', 'Failed to save history:', err)
         }
       }
 
@@ -495,28 +495,28 @@ function Devices() {
 
   const checkAndRefresh = async () => {
     setLoading(true)
-    info('Devices', 'Starting ADB check...')
+    logger.info('Devices', 'Starting ADB check...')
     try {
       const { available } = await window.electronAPI.adbCheck()
-      info('Devices', 'ADB check result:', { available })
+      logger.info('Devices', 'ADB check result:', { available })
       setAdbAvailable(available)
       if (available) {
-        info('Devices', 'Fetching devices...')
+        logger.info('Devices', 'Fetching devices...')
         const list = await window.electronAPI.adbDevices()
-        info('Devices', 'Devices found:', { count: list.length, devices: list })
+        logger.info('Devices', 'Devices found:', { count: list.length, devices: list })
         setDevices(list)
       }
     } catch (err) {
-      error('Devices', 'ADB check failed:', err)
+      logger.error('Devices', 'ADB check failed:', err)
       setAdbAvailable(false)
     }
     setLoading(false)
   }
 
   useEffect(() => {
-    info('Devices', 'Component mounted, scheduling ADB check...')
+    logger.info('Devices', 'Component mounted, scheduling ADB check...')
     const timer = setTimeout(() => {
-      info('Devices', 'Executing ADB check...')
+      logger.info('Devices', 'Executing ADB check...')
       checkAndRefresh()
     }, 100)
     return () => clearTimeout(timer)
