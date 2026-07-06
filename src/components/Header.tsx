@@ -9,7 +9,7 @@ function Header() {
   const title = pageTitles[location.pathname] || 'TsCameraTools'
 
   return (
-    <header className="flex h-14 items-center border-b border-border bg-card-bg px-6">
+    <header className="flex h-14 items-center border-b border-border bg-white px-6">
       <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
     </header>
   )

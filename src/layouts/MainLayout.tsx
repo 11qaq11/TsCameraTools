@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
+import { LogViewer } from '../components/LogViewer'
 
 function MainLayout() {
   return (
@@ -12,6 +13,7 @@ function MainLayout() {
           <Outlet />
         </main>
       </div>
+      <LogViewer />
     </div>
   )
 }

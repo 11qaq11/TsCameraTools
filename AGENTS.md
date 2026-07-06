@@ -26,6 +26,7 @@ npm run electron:build # tsc -b + Vite 构建 + electron-builder 打包 Windows 
 
 ## 架构速查
 
+- **文件编码：** 所有文件统一使用 **UTF-8** 编码（源代码、配置文件、文档、脚本等）
 - **路径别名：** `@` → `./src`（vite.config.ts 中配置）
 - **Electron 文件必须 `.cjs`：** `package.json` 有 `"type": "module"`，Electron 主进程不支持 ESM，所以 `electron/main.cjs` 和 `electron/preload.cjs` 使用 CommonJS
 - **Tailwind CSS v4：** 主题通过 `@theme` 定义在 `src/index.css`，**没有** `tailwind.config.js` 文件

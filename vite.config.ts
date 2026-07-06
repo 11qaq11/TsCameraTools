@@ -11,4 +11,30 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/auth': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        // 忽略后端未启动时的错误
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.warn('[Proxy] Socket.io error (backend may not be ready):', err.message)
+          })
+        }
+      }
+    }
+  }
 })
