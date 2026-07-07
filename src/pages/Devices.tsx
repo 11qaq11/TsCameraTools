@@ -125,18 +125,32 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', () => {
-          // Delay clearing composing flag to prevent duplicate input
-          setTimeout(() => { composing.current = false }, 50)
+        textarea.addEventListener('compositionend', (e: CompositionEvent) => {
+          composing.current = false
+          // compositionend 时直接处理输入，避免 onData 重复触发
+          if (e.data) {
+            const before = inputBuffer.current.slice(0, cursorPos.current)
+            const after = inputBuffer.current.slice(cursorPos.current)
+            inputBuffer.current = before + e.data + after
+            cursorPos.current += e.data.length
+            term.write(e.data + after)
+            if (after.length) term.write('\x1b[' + after.length + 'D')
+          }
         })
       }
 
       const promptPrefix = ' \x1b[36m' + model + '\x1b[0m \x1b[32m$\x1b[0m '
 
-      term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n\r\n')
-      term.write(promptPrefix)
-      inputBuffer.current = ''
-      cursorPos.current = 0
+      // 延迟显示欢迎信息，等待 ADB Shell 初始化完成
+      setTimeout(() => {
+        term.write('\x1b[2J\x1b[H') // 清屏
+        term.write('\x1b[36m adb shell\x1b[0m connected to \x1b[33m' + serial + '\x1b[0m\r\n')
+        term.write('\x1b[36m Device:\x1b[0m ' + model + '\x1b[0m\r\n\r\n')
+        term.write(promptPrefix)
+        inputBuffer.current = ''
+        cursorPos.current = 0
+      }, 100)
+      
       sessionActive.current = true
 
       const writePrompt = () => {
