@@ -21,13 +21,13 @@
 
 ## Phase 3: 版本控制
 
-- [ ] T009 推送本地提交到远程
-- [ ] T010 验证 git status 同步
+- [x] T009 推送本地提交到远程
+- [x] T010 验证 git status 同步
 
 ## Phase 4: 构建验证
 
-- [ ] T011 运行 npm run electron:build
-- [ ] T012 验证生成的 exe 文件功能
+- [x] T011 运行 npm run build - 前端构建成功
+- [ ] T012 运行 npm run electron:build - 失败：缺少 Visual Studio (node-pty 原生模块需要)
 
 ---
 
