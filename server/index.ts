@@ -8,6 +8,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import authRoutes from './routes/auth.js'
 import adbRoutes from './routes/adb.js'
+import logRoutes from './routes/logs.js'
 import { setupShellSocket } from './services/shell.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -27,6 +28,7 @@ app.use(express.json())
 // 路由
 app.use('/auth', authRoutes)
 app.use('/api/adb', adbRoutes)
+app.use('/api/logs', logRoutes)
 
 // 健康检查
 app.get('/health', (req, res) => {

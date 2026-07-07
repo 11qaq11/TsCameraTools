@@ -1,12 +1,12 @@
 # TsCameraTools Web 版
 
-基于 Web 的影像开发工具箱，参考 Codex CLI 设计，支持飞书企业账号登录。
+基于 Web 的影像开发工具箱，支持飞书企业账号登录。
 
 ## 功能特性
 
 - 🔐 飞书企业账号 OAuth 登录（中科创达）
 - 📱 ADB 设备检测和管理
-- 💻 Web 终端（cmder 风格，基于 xterm.js + WebSocket）
+- 💻 Web 终端（Hyper 风格，基于 xterm.js + WebSocket）
 - 🎨 Light 主题设计
 - 📜 命令历史记录（本地存储）
 - 🔍 Ctrl+R 历史搜索
@@ -17,16 +17,18 @@
 - ✅ 飞书 OAuth 登录流程
 - ✅ ADB 设备检测（自动检测 + 手动刷新）
 - ✅ 设备卡片（Root/Remount/Connect）
-- ✅ cmder 风格 Shell 终端
+- ✅ Hyper 风格 Shell 终端
 - ✅ 命令历史持久化
 - ✅ Ctrl+R 反向搜索
 - ✅ 终端快捷键（Ctrl+C/V/A/E/U/K/W/L）
 - ✅ Light 主题 UI
 - ✅ 操作日志面板
+- ✅ Redux Store（参考 Hyper 架构）
+- ✅ 错误边界（防止白屏）
 
 ### 已知问题
-- ⚠️ Shell 终端输入延迟较大（等待优化）
-- ⚠️ 不支持中文输入法（等待优化）
+- ⚠️ Shell 终端使用本地回显模式（child_process.spawn pipe 模式）
+- ⚠️ 中文输入法支持（IME composition 事件处理）
 - ⚠️ WebSocket 连接在后端启动前有短暂报错（不影响功能）
 
 ## 快速开始
@@ -57,15 +59,7 @@ FEISHU_REDIRECT_URI=http://localhost:3000/auth/feishu/callback
 ADB_PATH=C:\tools\platform-tools\adb.exe
 ```
 
-### 3. 生成开发证书（可选）
-
-如果需要 HTTPS：
-
-```bash
-./scripts/generate-certs.ps1
-```
-
-### 4. 启动开发服务器
+### 3. 启动开发服务器
 
 ```bash
 # 同时启动前端和后端
@@ -76,7 +70,7 @@ npm run dev        # 前端 (端口 5173)
 npm run server:dev # 后端 (端口 3000)
 ```
 
-### 5. 访问应用
+### 4. 访问应用
 
 打开浏览器访问：`http://localhost:5173`
 
@@ -98,7 +92,8 @@ TsCameraTools/
 │   ├── config.ts          # 配置文件
 │   ├── routes/
 │   │   ├── auth.ts        # 认证路由
-│   │   └── adb.ts         # ADB API
+│   │   ├── adb.ts         # ADB API
+│   │   └── logs.ts        # 日志接收
 │   ├── services/
 │   │   └── shell.ts       # 终端会话服务
 │   └── types/
@@ -107,22 +102,21 @@ TsCameraTools/
 │   ├── pages/
 │   │   ├── Login.tsx      # 登录页
 │   │   ├── AuthCallback.tsx # OAuth 回调
-│   │   └── DevicesWeb.tsx # 设备管理页（Web 版）
+│   │   └── DevicesWeb.tsx # 设备管理页
 │   ├── components/
 │   │   ├── Header.tsx     # 顶部栏
 │   │   ├── Sidebar.tsx    # 侧边栏
 │   │   ├── LogViewer.tsx  # 操作日志面板
-│   │   └── headerLogo.png # 中科创达图标
+│   │   ├── ErrorBoundary.tsx # 错误边界
+│   │   └── terminal/      # Hyper 风格终端
 │   ├── hooks/
 │   │   ├── useAuth.ts     # 认证 Hook
 │   │   └── useSocket.ts   # WebSocket Hook
-│   ├── layouts/
-│   │   └── MainLayout.tsx # 主布局
+│   ├── store/             # Redux Store
 │   └── utils/
 │       ├── auth.ts        # 认证工具
 │       └── logger.ts      # 日志工具
 ├── certs/                  # SSL 证书（开发环境）
-├── logs/                   # 日志文件
 └── .env                    # 环境变量
 ```
 
@@ -164,7 +158,6 @@ TsCameraTools/
 | `Ctrl+L` | 清屏 |
 | `Ctrl+R` | 反向搜索历史 |
 | `↑/↓` | 浏览命令历史 |
-| `Ctrl+←/→` | 按单词跳转 |
 
 ## 部署
 
