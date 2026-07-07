@@ -68,47 +68,47 @@
 
 ## Phase 1.7: Ponytail Review
 
-- [ ] T042 [P] Ponytail Review src/App.tsx
-- [ ] T043 [P] Ponytail Review src/main.tsx
-- [ ] T044 Ponytail Review src/pages/Devices.tsx
-- [ ] T045 [P] Ponytail Review src/pages/DevicesWeb.tsx
-- [ ] T046 [P] Ponytail Review src/pages/Login.tsx
-- [ ] T047 [P] Ponytail Review src/pages/AuthCallback.tsx
-- [ ] T048 Ponytail Review src/components/terminal/Term.tsx
-- [ ] T049 Ponytail Review src/components/terminal/HyperTerminal.tsx
-- [ ] T050 [P] Ponytail Review src/components/terminal/SearchBox.tsx
-- [ ] T051 [P] Ponytail Review src/components/terminal/StatusBar.tsx
-- [ ] T052 [P] Ponytail Review src/components/terminal/Header.tsx
-- [ ] T053 [P] Ponytail Review src/components/Sidebar.tsx
-- [ ] T054 [P] Ponytail Review src/components/Header.tsx
-- [ ] T055 [P] Ponytail Review src/components/ErrorBoundary.tsx
-- [ ] T056 [P] Ponytail Review src/components/LogViewer.tsx
-- [ ] T057 [P] Ponytail Review src/hooks/useAuth.ts
-- [ ] T058 [P] Ponytail Review src/hooks/useSocket.ts
-- [ ] T059 [P] Ponytail Review src/hooks/useTerminal.ts
-- [ ] T060 [P] Ponytail Review src/hooks/useSearch.ts
-- [ ] T061 [P] Ponytail Review src/utils/auth.ts
-- [ ] T062 [P] Ponytail Review src/utils/logger.ts
-- [ ] T063 [P] Ponytail Review src/store/index.ts
-- [ ] T064 [P] Ponytail Review src/store/reducers/ui.ts
-- [ ] T065 [P] Ponytail Review src/store/reducers/sessions.ts
-- [ ] T066 [P] Ponytail Review src/config/default.ts
-- [ ] T067 [P] Ponytail Review src/types/index.ts
-- [ ] T068 [P] Ponytail Review src/types/hyper.ts
-- [ ] T069 [P] Ponytail Review src/layouts/MainLayout.tsx
-- [ ] T070 Ponytail Review server/index.ts
-- [ ] T071 [P] Ponytail Review server/config.ts
-- [ ] T072 Ponytail Review server/routes/auth.ts
-- [ ] T073 Ponytail Review server/routes/adb.ts
-- [ ] T074 [P] Ponytail Review server/routes/logs.ts
-- [ ] T075 Ponytail Review server/services/shell.ts
-- [ ] T076 [P] Ponytail Review server/types/index.ts
-- [ ] T077 Ponytail Review electron/main.cjs
-- [ ] T078 [P] Ponytail Review electron/preload.cjs
-- [ ] T079 [P] Ponytail Review package.json
-- [ ] T080 [P] Ponytail Review vite.config.ts
-- [ ] T081 [P] Ponytail Review tsconfig.json
-- [ ] T082 [P] Ponytail Review .oxlintrc.json
+- [x] T042 [P] Ponytail Review src/App.tsx
+- [x] T043 [P] Ponytail Review src/main.tsx
+- [x] T044 Ponytail Review src/pages/Devices.tsx
+- [x] T045 [P] Ponytail Review src/pages/DevicesWeb.tsx
+- [x] T046 [P] Ponytail Review src/pages/Login.tsx
+- [x] T047 [P] Ponytail Review src/pages/AuthCallback.tsx
+- [x] T048 Ponytail Review src/components/terminal/Term.tsx
+- [x] T049 Ponytail Review src/components/terminal/HyperTerminal.tsx
+- [x] T050 [P] Ponytail Review src/components/terminal/SearchBox.tsx
+- [x] T051 [P] Ponytail Review src/components/terminal/StatusBar.tsx
+- [x] T052 [P] Ponytail Review src/components/terminal/Header.tsx
+- [x] T053 [P] Ponytail Review src/components/Sidebar.tsx
+- [x] T054 [P] Ponytail Review src/components/Header.tsx
+- [x] T055 [P] Ponytail Review src/components/ErrorBoundary.tsx
+- [x] T056 [P] Ponytail Review src/components/LogViewer.tsx
+- [x] T057 [P] Ponytail Review src/hooks/useAuth.ts
+- [x] T058 [P] Ponytail Review src/hooks/useSocket.ts
+- [x] T059 [P] Ponytail Review src/hooks/useTerminal.ts
+- [x] T060 [P] Ponytail Review src/hooks/useSearch.ts
+- [x] T061 [P] Ponytail Review src/utils/auth.ts
+- [x] T062 [P] Ponytail Review src/utils/logger.ts
+- [x] T063 [P] Ponytail Review src/store/index.ts
+- [x] T064 [P] Ponytail Review src/store/reducers/ui.ts
+- [x] T065 [P] Ponytail Review src/store/reducers/sessions.ts
+- [x] T066 [P] Ponytail Review src/config/default.ts
+- [x] T067 [P] Ponytail Review src/types/index.ts
+- [x] T068 [P] Ponytail Review src/types/hyper.ts
+- [x] T069 [P] Ponytail Review src/layouts/MainLayout.tsx
+- [x] T070 Ponytail Review server/index.ts
+- [x] T071 [P] Ponytail Review server/config.ts
+- [x] T072 Ponytail Review server/routes/auth.ts
+- [x] T073 Ponytail Review server/routes/adb.ts
+- [x] T074 [P] Ponytail Review server/routes/logs.ts
+- [x] T075 Ponytail Review server/services/shell.ts
+- [x] T076 [P] Ponytail Review server/types/index.ts
+- [x] T077 Ponytail Review electron/main.cjs
+- [x] T078 [P] Ponytail Review electron/preload.cjs
+- [x] T079 [P] Ponytail Review package.json
+- [x] T080 [P] Ponytail Review vite.config.ts
+- [x] T081 [P] Ponytail Review tsconfig.json
+- [x] T082 [P] Ponytail Review .oxlintrc.json
 
 ## Phase 2: 文档更新
 
@@ -148,10 +148,10 @@
 - [x] T100 [P] 创建 src/utils/logger.test.ts - 日志工具测试
 - [x] T101 [P] 创建 src/store/reducers/ui.test.ts - UI 状态管理测试
 - [x] T102 [P] 创建 src/store/reducers/sessions.test.ts - 会话状态管理测试
-- [ ] T103 [P] 创建 src/hooks/useAuth.test.ts - 认证 Hook 测试
-- [ ] T104 [P] 创建 src/hooks/useSocket.test.ts - Socket Hook 测试
-- [ ] T105 [P] 创建 src/hooks/useTerminal.test.ts - 终端 Hook 测试
-- [ ] T106 [P] 创建 src/hooks/useSearch.test.ts - 搜索 Hook 测试
+- [x] T103 [P] 创建 src/hooks/useAuth.test.ts - 认证 Hook 测试
+- [x] T104 [P] 创建 src/hooks/useSocket.test.ts - Socket Hook 测试
+- [x] T105 [P] 创建 src/hooks/useTerminal.test.ts - 终端 Hook 测试
+- [x] T106 [P] 创建 src/hooks/useSearch.test.ts - 搜索 Hook 测试
 
 ### Phase 3.3: 组件测试
 
@@ -160,23 +160,23 @@
 - [x] T109 [P] 创建 src/components/Sidebar.test.tsx - 侧边栏测试
 - [x] T110 [P] 创建 src/components/Header.test.tsx - 顶部栏测试
 - [x] T111 [P] 创建 src/components/LogViewer.test.tsx - 日志查看器测试
-- [ ] T112 [P] 创建 src/components/terminal/Term.test.tsx - 终端渲染测试
-- [ ] T113 [P] 创建 src/components/terminal/HyperTerminal.test.tsx - 终端组件测试
+- [x] T112 [P] 创建 src/components/terminal/Term.test.tsx - 终端渲染测试
+- [x] T113 [P] 创建 src/components/terminal/HyperTerminal.test.tsx - 终端组件测试
 - [x] T114 [P] 创建 src/components/terminal/SearchBox.test.tsx - 搜索框测试
 - [x] T115 [P] 创建 src/components/terminal/StatusBar.test.tsx - 状态栏测试
 - [x] T116 [P] 创建 src/components/terminal/Header.test.tsx - 终端头部测试
 
 ### Phase 3.4: 集成测试
 
-- [ ] T117 创建 tests/integration/adb-connection.test.ts - ADB 设备连接流程
-- [ ] T118 创建 tests/integration/shell-interaction.test.ts - Shell 终端交互
-- [ ] T119 创建 tests/integration/auth-flow.test.ts - 飞书 OAuth 登录
-- [ ] T120 创建 tests/integration/logging.test.ts - 日志记录功能
+- [x] T117 创建 tests/integration/adb-connection.test.ts - ADB 设备连接流程
+- [x] T118 创建 tests/integration/shell-interaction.test.ts - Shell 终端交互
+- [x] T119 创建 tests/integration/auth-flow.test.ts - 飞书 OAuth 登录
+- [x] T120 创建 tests/integration/logging.test.ts - 日志记录功能
 
 ### Phase 3.5: E2E 测试
 
-- [ ] T121 创建 tests/e2e/user-flow.spec.ts - 完整用户流程
-- [ ] T122 创建 tests/e2e/error-handling.spec.ts - 错误处理流程
+- [x] T121 创建 tests/e2e/user-flow.spec.ts - 完整用户流程
+- [x] T122 创建 tests/e2e/error-handling.spec.ts - 错误处理流程
 
 ---
 
