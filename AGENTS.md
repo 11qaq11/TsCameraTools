@@ -6,8 +6,11 @@
 
 ## 项目简介
 
-影像开发工具箱 IDE，基于 Electron + React + TypeScript + Tailwind CSS。
-功能：ADB 设备检测/安装/连接、交互式 Shell 终端（xterm.js）。
+影像开发工具箱 IDE，支持两种运行模式：
+- **Web 模式**：Express + Socket.io 后端 + React 前端（推荐）
+- **Electron 模式**：桌面应用（已有基础架构）
+
+功能：ADB 设备检测/安装/连接、交互式 Shell 终端（xterm.js + child_process）、飞书 OAuth 登录。
 
 ## 命令
 
@@ -17,10 +20,17 @@ npm run build          # tsc -b && vite build（包含类型检查）
 npm run lint           # oxlint 代码检查（非 eslint）
 npm run electron:dev   # Electron 开发模式（Vite + Electron 并行）
 npm run electron:build # tsc -b + Vite 构建 + electron-builder 打包 Windows exe
+npm run web:dev        # Web 开发模式（前端 + 后端并行）
+npm run web:build      # Web 生产构建（前端 + 后端）
+npm run web:start      # 启动生产服务器
+npm run server:dev     # 后端开发模式（tsx watch）
+npm run server:build   # 后端 TypeScript 编译
+npm run server:start   # 启动生产后端
 ```
 
 `npm run build` 包含 `tsc -b` 类型检查，失败即构建失败。
 `npm run electron:build` 是完整打包流程，产物在 `release/win-unpacked/TsCameraTools.exe`。
+`npm run web:dev` 是 Web 模式开发，同时启动前端（5173）和后端（3000）。
 
 ---
 
@@ -34,6 +44,7 @@ npm run electron:build # tsc -b + Vite 构建 + electron-builder 打包 Windows 
 - **Linter：** `oxlint`（不是 eslint），配置在 `.oxlintrc.json`
 - **UI 语言：** 中文（组件文本、标签、提示信息均为中文）
 - **IPC 模式：** `electron/main.cjs`（handler）→ `electron/preload.cjs`（暴露 API）→ `src/types/index.ts`（类型定义）→ 前端通过 `window.electronAPI` 调用
+- **Shell 终端：** 使用 `child_process.spawn`（pipe 模式）+ 前端本地回显，支持中文输入
 
 ---
 
@@ -44,36 +55,102 @@ TsCameraTools/
 ├── electron/
 │   ├── main.cjs            # Electron 主进程（IPC handlers, ADB 逻辑）
 │   └── preload.cjs         # preload 桥接（暴露 electronAPI）
+├── server/                  # Web 模式后端
+│   ├── index.ts            # 服务器入口（Express + Socket.io）
+│   ├── config.ts           # 配置文件
+│   ├── routes/
+│   │   ├── auth.ts         # 飞书 OAuth 路由
+│   │   ├── adb.ts          # ADB API 路由
+│   │   └── logs.ts         # 前端日志接收路由
+│   ├── services/
+│   │   └── shell.ts        # Shell 终端服务（child_process.spawn）
+│   └── types/
+│       └── index.ts        # 后端类型定义
 ├── src/
-│   ├── main.tsx            # React 入口
-│   ├── App.tsx             # 路由定义
+│   ├── main.tsx            # React 入口（Redux Provider + HashRouter）
+│   ├── App.tsx             # 路由定义（含 ProtectedRoute）
 │   ├── index.css           # 全局样式 + Tailwind v4 @theme 主题
+│   ├── store/              # Redux Store（参考 Hyper 架构）
+│   │   ├── index.ts        # Store 配置
+│   │   └── reducers/
+│   │       ├── ui.ts       # UI 状态（主题、字体、光标）
+│   │       └── sessions.ts # 会话状态
 │   ├── components/
 │   │   ├── Sidebar.tsx     # 侧边栏导航
-│   │   └── Header.tsx      # 顶部栏
+│   │   ├── Header.tsx      # 顶部栏
+│   │   ├── LogViewer.tsx   # 操作日志面板
+│   │   ├── ErrorBoundary.tsx # React 错误边界
+│   │   └── terminal/       # Hyper 风格终端组件
+│   │       ├── HyperTerminal.tsx # 主终端组件
+│   │       ├── Term.tsx    # xterm.js 终端渲染
+│   │       ├── Header.tsx  # 终端标签栏
+│   │       ├── SearchBox.tsx # 搜索框
+│   │       └── StatusBar.tsx # 状态栏
 │   ├── layouts/
 │   │   └── MainLayout.tsx  # 主布局（侧边栏 + Header + Outlet）
 │   ├── pages/
-│   │   └── Devices.tsx     # 设备连接页（ADB 检测/安装/名片/终端）
+│   │   ├── Devices.tsx     # Electron 设备连接页
+│   │   ├── DevicesWeb.tsx  # Web 设备连接页（含 HyperTerminal）
+│   │   ├── Login.tsx       # 登录页（飞书 OAuth）
+│   │   └── AuthCallback.tsx # OAuth 回调页
+│   ├── hooks/
+│   │   ├── useAuth.ts      # 认证 Hook
+│   │   ├── useSocket.ts    # WebSocket Hook
+│   │   ├── useTerminal.ts  # 终端管理 Hook
+│   │   └── useSearch.ts    # 搜索功能 Hook
 │   ├── types/
-│   │   └── index.ts        # 全局接口（ElectronAPI 等）
+│   │   ├── index.ts        # 全局接口（ElectronAPI 等）
+│   │   └── hyper.ts        # Hyper 风格类型定义
+│   ├── config/
+│   │   └── default.ts      # 默认主题配置
 │   └── utils/
-│       └── logger.ts       # 日志工具（控制台 + 文件）
+│       ├── auth.ts         # 认证工具（Token 管理）
+│       └── logger.ts       # 日志工具（控制台 + localStorage + 后端文件）
+├── .env                     # 环境变量（不提交到 Git）
+├── .env.example            # 环境变量示例
 ├── .opencode/skills/        # AI agent skills（按需加载）
 ├── .specify/                # Spec-Driven Development 配置
 ├── specs/                   # 功能规格文档
 ├── scripts/
-│   └── test.ps1            # PowerShell 烟雾测试（非单元测试）
+│   └── generate-certs.ps1  # SSL 证书生成脚本
+├── certs/                   # SSL 证书（开发环境）
 ├── AGENTS.md               # 本文件
 ├── README.md
+├── README-WEB.md           # Web 模式文档
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json            # 项目引用（指向下面两个）
 ├── tsconfig.app.json        # 前端 TS 配置（src/）
-└── tsconfig.node.json       # Node/Vite TS 配置（vite.config.ts）
+├── tsconfig.node.json       # Node/Vite TS 配置（vite.config.ts）
+└── tsconfig.server.json     # 后端 TS 配置（server/）
 ```
 
 禁止随意创建新的顶层目录，新增文件放入对应子目录。
+
+---
+
+## Web 模式开发
+
+### 启动开发服务器
+```bash
+npm run web:dev  # 同时启动前端 (5173) 和后端 (3000)
+```
+
+### 环境变量配置
+复制 `.env.example` 为 `.env`，配置：
+- `FEISHU_APP_ID` / `FEISHU_APP_SECRET`：飞书 OAuth
+- `ADB_PATH`：ADB 可执行文件路径（Windows 需完整路径）
+
+### Shell 终端架构
+- 后端使用 `child_process.spawn` 创建 ADB shell 进程（pipe 模式）
+- 前端使用 `xterm.js` 渲染终端 + 本地回显
+- 通过 WebSocket 实时通信
+- 支持 IME 中文输入
+
+### 飞书 OAuth 登录
+- 使用飞书企业账号（中科创达）登录
+- 回调地址：`http://localhost:3000/auth/feishu/callback`
+- 前端回调地址：`http://localhost:5173/#/login/callback`
 
 ---
 
@@ -188,13 +265,14 @@ For multi-step tasks, state a brief plan:
 
 每次完成代码编写后，必须执行完整编译：
 
-1. 运行 `npm run electron:build` 完成 TypeScript 编译 + Vite 构建 + Electron 打包
+1. 运行 `npm run electron:build` 或 `npm run web:build` 完成 TypeScript 编译 + Vite 构建
 2. 若打包失败，按以下流程处理：
    - 第一步：杀死所有 TsCameraTools 进程
-   - 第二步：等待 3 秒后重试 `npm run electron:build`
+   - 第二步：等待 3 秒后重试构建
    - 最多重试 3 次，每次重试前都先杀进程
    - 若仍失败，立即停止并向用户反馈错误信息
-3. 最终交付物为 `release/win-unpacked/TsCameraTools.exe`（免安装版）
+3. Electron 模式交付物为 `release/win-unpacked/TsCameraTools.exe`
+4. Web 模式交付物为 `dist/`（前端）+ `dist/server/`（后端）
 
 此步骤不可跳过，不可省略。
 
@@ -206,4 +284,4 @@ For multi-step tasks, state a brief plan:
 - 禁止对 master 强制推送（force push）
 - 分支命名：`feature/`、`fix/`、`refactor/`、`docs/`
 - Commit message 格式：`type: description`
-- PR 合并前确保 `npm run electron:build` 能正常通过
+- PR 合并前确保 `npm run web:build` 能正常通过
