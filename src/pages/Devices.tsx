@@ -22,39 +22,39 @@ function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (seri
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card-bg p-5">
+    <div className="rounded-xl border border-[#334155] bg-[#1E293B] p-5 hover:border-[#22C55E] transition-all duration-300 hover:shadow-lg hover:shadow-[#22C55E]/10">
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#22C55E]/10 text-[#22C55E]">
           <HardDrive size={20} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-text-primary">{device.model}</p>
-          <p className="text-xs text-text-secondary font-mono">{device.serial}</p>
+          <p className="truncate text-sm font-semibold text-white">{device.model}</p>
+          <p className="text-xs text-[#94A3B8] font-mono">{device.serial}</p>
         </div>
       </div>
 
       {status && (
-        <p className="mb-3 rounded bg-content-bg px-2 py-1 text-xs text-text-secondary truncate">{status}</p>
+        <p className="mb-3 rounded bg-[#0F172A] px-2 py-1 text-xs text-[#94A3B8] truncate font-mono">{status}</p>
       )}
 
       <div className="flex items-center gap-2">
         <button
           onClick={handleRoot}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-xs font-medium text-white hover:bg-amber-600"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#F59E0B] px-3 py-2 text-xs font-medium text-white hover:bg-[#F59E0B]/90 transition-colors cursor-pointer"
         >
           <Shield size={13} />
           Root
         </button>
         <button
           onClick={handleRemount}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-purple-500 px-3 py-2 text-xs font-medium text-white hover:bg-purple-600"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#8B5CF6] px-3 py-2 text-xs font-medium text-white hover:bg-[#8B5CF6]/90 transition-colors cursor-pointer"
         >
           <HardDrive size={13} />
           Remount
         </button>
         <button
           onClick={() => onConnect(device.serial)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-hover"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#22C55E] px-3 py-2 text-xs font-medium text-white hover:bg-[#22C55E]/90 transition-colors cursor-pointer"
         >
           <Terminal size={13} />
           Connect
@@ -95,15 +95,29 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
 
       term = new Terminal({
         fontSize: 14,
-        fontFamily: "'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace",
+        fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace",
         theme: {
-          background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4',
-          cursorAccent: '#1e1e1e', selectionBackground: '#264f78',
-          black: '#1e1e1e', red: '#f44747', green: '#6a9955', yellow: '#d7ba7d',
-          blue: '#569cd6', magenta: '#c586c0', cyan: '#4ec9b0', white: '#d4d4d4',
-          brightBlack: '#808080', brightRed: '#f44747', brightGreen: '#6a9955',
-          brightYellow: '#d7ba7d', brightBlue: '#569cd6', brightMagenta: '#c586c0',
-          brightCyan: '#4ec9b0', brightWhite: '#d4d4d4',
+          background: '#0F172A',
+          foreground: '#F8FAFC',
+          cursor: '#22C55E',
+          cursorAccent: '#0F172A',
+          selectionBackground: '#22C55E33',
+          black: '#1E293B',
+          red: '#EF4444',
+          green: '#22C55E',
+          yellow: '#F59E0B',
+          blue: '#3B82F6',
+          magenta: '#8B5CF6',
+          cyan: '#06B6D4',
+          white: '#F8FAFC',
+          brightBlack: '#475569',
+          brightRed: '#FCA5A5',
+          brightGreen: '#86EFAC',
+          brightYellow: '#FDE68A',
+          brightBlue: '#93C5FD',
+          brightMagenta: '#C4B5FD',
+          brightCyan: '#67E8F9',
+          brightWhite: '#FFFFFF',
         },
       })
       fitAddon = new FitAddon()
@@ -475,32 +489,32 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
   }, [shellId, serial, model])
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[#3c3c3c] overflow-hidden" style={{ background: '#252526' }}>
-      <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-2" style={{ background: '#333333' }}>
-        <span className="text-xs font-medium font-mono" style={{ color: '#cccccc' }}>adb -s {serial} shell</span>
+    <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[#334155] overflow-hidden" style={{ background: '#0F172A' }}>
+      <div className="flex items-center justify-between border-b border-[#334155] px-4 py-2" style={{ background: '#1E293B' }}>
+        <span className="text-xs font-medium font-mono" style={{ color: '#22C55E' }}>adb -s {serial} shell</span>
         <button
           onClick={() => { window.electronAPI.adbShellKill(shellId); onClose() }}
-          className="rounded p-1 hover:bg-[#c42b1c]"
-          style={{ color: '#cccccc' }}
+          className="rounded p-1 hover:bg-[#EF4444] cursor-pointer"
+          style={{ color: '#94A3B8' }}
         >
           <X size={14} />
         </button>
       </div>
-      <div ref={termRef} className="flex-1" style={{ background: '#1e1e1e' }} />
+      <div ref={termRef} className="flex-1" style={{ background: '#0F172A' }} />
     </div>
   )
 }
 
 function AdbNotFound({ onInstall, installing }: { onInstall: () => void; installing: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-amber-300 bg-amber-50 py-16">
-      <AlertTriangle size={36} className="mb-3 text-amber-500" />
-      <p className="text-sm font-medium text-text-primary">未检测到 ADB 程序</p>
-      <p className="mt-1 text-xs text-text-secondary">需要安装 Android Platform Tools 才能连接设备</p>
+    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#F59E0B] bg-[#F59E0B]/10 py-16">
+      <AlertTriangle size={36} className="mb-3 text-[#F59E0B]" />
+      <p className="text-sm font-medium text-white">未检测到 ADB 程序</p>
+      <p className="mt-1 text-xs text-[#94A3B8]">需要安装 Android Platform Tools 才能连接设备</p>
       <button
         onClick={onInstall}
         disabled={installing}
-        className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+        className="mt-4 flex items-center gap-2 rounded-lg bg-[#22C55E] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#22C55E]/90 disabled:opacity-50 cursor-pointer"
       >
         <Download size={16} className={installing ? 'animate-bounce' : ''} />
         {installing ? '正在安装...' : '一键安装 ADB'}
@@ -562,7 +576,7 @@ function Devices() {
   }
 
   if (adbAvailable === null) {
-    return <div className="flex items-center justify-center py-16 text-sm text-text-secondary">检测中...</div>
+    return <div className="flex items-center justify-center py-16 text-sm text-[#94A3B8]">检测中...</div>
   }
 
   if (!adbAvailable) {
@@ -572,13 +586,13 @@ function Devices() {
   return (
     <div className="flex flex-col h-full gap-6 pb-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-[#94A3B8]">
           {devices.length > 0 ? `已检测到 ${devices.length} 个设备` : '未检测到设备'}
         </p>
         <button
           onClick={checkAndRefresh}
           disabled={loading}
-          className="flex items-center gap-2 rounded-lg border border-border bg-card-bg px-3 py-2 text-sm font-medium text-text-primary hover:bg-content-bg disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1E293B] px-3 py-2 text-sm font-medium text-white hover:bg-[#334155] disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           刷新设备
@@ -592,9 +606,9 @@ function Devices() {
       </div>
 
       {devices.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-16">
-          <HardDrive size={32} className="mb-3 text-text-secondary" />
-          <p className="text-sm text-text-secondary">请连接 Android 设备并确保 USB 调试已开启</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#334155] py-16">
+          <HardDrive size={32} className="mb-3 text-[#94A3B8]" />
+          <p className="text-sm text-[#94A3B8]">请连接 Android 设备并确保 USB 调试已开启</p>
         </div>
       )}
 

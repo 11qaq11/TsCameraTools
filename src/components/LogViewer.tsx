@@ -38,7 +38,7 @@ export function LogViewer() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-500 shadow-lg border border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-[#1E293B] text-[#22C55E] shadow-lg border border-[#334155] hover:bg-[#334155] transition-colors cursor-pointer pulse-glow"
         title="查看操作日志"
       >
         <Terminal size={18} />
@@ -47,27 +47,27 @@ export function LogViewer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[400px] w-[600px] flex-col rounded-lg border border-gray-200 bg-white shadow-2xl">
-      <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
-        <span className="text-xs font-medium text-gray-900">操作日志</span>
+    <div className="fixed bottom-4 right-4 z-50 flex h-[400px] w-[600px] flex-col rounded-lg border border-[#334155] shadow-2xl" style={{ backgroundColor: '#1E293B' }}>
+      <div className="flex items-center justify-between border-b border-[#334155] px-3 py-2">
+        <span className="text-xs font-medium text-white font-mono">操作日志</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setPinned(!pinned)}
-            className={`rounded p-1 transition-colors ${pinned ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:bg-gray-100'}`}
+            className={`rounded p-1 transition-colors cursor-pointer ${pinned ? 'text-[#22C55E] bg-[#22C55E]/10' : 'text-[#94A3B8] hover:bg-[#334155]'}`}
             title={pinned ? "取消自动滚动" : "自动滚动到底部"}
           >
             {pinned ? <Pin size={14} /> : <PinOff size={14} />}
           </button>
           <button
             onClick={() => { logger.clearLogs(); setLogs([]) }}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900"
+            className="rounded p-1 text-[#94A3B8] hover:bg-[#334155] hover:text-white cursor-pointer"
             title="清除日志"
           >
             <Trash2 size={14} />
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900"
+            className="rounded p-1 text-[#94A3B8] hover:bg-[#334155] hover:text-white cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -76,18 +76,19 @@ export function LogViewer() {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-relaxed bg-gray-50"
+        className="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-relaxed"
+        style={{ backgroundColor: '#0F172A' }}
       >
         {logs.length === 0 && (
-          <p className="text-gray-400">暂无日志</p>
+          <p className="text-[#475569]">暂无日志</p>
         )}
         {logs.map((line, i) => {
-          let color = 'text-gray-600'
-          if (line.includes('[ERROR]')) color = 'text-red-500'
-          else if (line.includes('[WARN]')) color = 'text-yellow-600'
-          else if (line.includes('===')) color = 'text-blue-500'
-          else if (line.includes('[Shell]')) color = 'text-green-600'
-          return <p key={i} className={color}>{line}</p>
+          let color = '#94A3B8'
+          if (line.includes('[ERROR]')) color = '#EF4444'
+          else if (line.includes('[WARN]')) color = '#F59E0B'
+          else if (line.includes('===')) color = '#3B82F6'
+          else if (line.includes('[Shell]')) color = '#22C55E'
+          return <p key={i} style={{ color }}>{line}</p>
         })}
       </div>
     </div>

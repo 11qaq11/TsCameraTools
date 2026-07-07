@@ -56,10 +56,20 @@ export function useSocket() {
     }
   }, [])
 
+  const once = useCallback((event: string, callback: (...args: unknown[]) => void) => {
+    socketRef.current?.once(event, callback)
+  }, [])
+
+  const off = useCallback((event: string, callback: (...args: unknown[]) => void) => {
+    socketRef.current?.off(event, callback)
+  }, [])
+
   return {
     socket: socketRef.current,
     emit,
     on,
+    once,
+    off,
     connected
   }
 }

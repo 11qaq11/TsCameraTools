@@ -22,6 +22,7 @@ describe('sessions reducer', () => {
         cols: 80,
         rows: 24,
         active: true,
+        shell: 'adb shell',
         pid: 1234,
       }
       const state = sessionsReducer(initialState, addSession(session))
@@ -36,6 +37,7 @@ describe('sessions reducer', () => {
         cols: 80,
         rows: 24,
         active: true,
+        shell: 'adb shell',
         pid: 1234,
       }
       let state = sessionsReducer(initialState, addSession(session))
@@ -50,6 +52,7 @@ describe('sessions reducer', () => {
         cols: 80,
         rows: 24,
         active: true,
+        shell: 'adb shell',
         pid: 1234,
       }
       const session2: SessionState = {
@@ -58,6 +61,7 @@ describe('sessions reducer', () => {
         cols: 80,
         rows: 24,
         active: false,
+        shell: 'adb shell',
         pid: 5678,
       }
       let state = sessionsReducer(initialState, addSession(session1))
@@ -74,6 +78,7 @@ describe('sessions reducer', () => {
         cols: 80,
         rows: 24,
         active: true,
+        shell: 'adb shell',
         pid: 1234,
       }
       let state = sessionsReducer(initialState, addSession(session))

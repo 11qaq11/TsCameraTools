@@ -47,8 +47,8 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-2xl border border-gray-300 bg-gray-200 p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#0F172A' }}>
+      <div className="w-full max-w-md rounded-2xl border border-[#334155] p-8 shadow-2xl gradient-border" style={{ backgroundColor: '#1E293B' }}>
         {/* 左上角图标 */}
         <div className="mb-6">
           <img src={logoImg} alt="ThunderSoft" className="h-5 w-auto" />
@@ -56,12 +56,12 @@ function Login() {
         
         {/* 居中标题 */}
         <div className="mb-8 text-center">
-          <h1 className="text-xl font-bold text-gray-900 font-mono tracking-wider">TsCameraTools</h1>
-          <p className="mt-2 text-sm text-gray-500">影像开发工具箱</p>
+          <h1 className="text-xl font-bold text-white font-mono tracking-wider glow-text">TsCameraTools</h1>
+          <p className="mt-2 text-sm text-[#94A3B8]">影像开发工具箱</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-center text-sm text-red-600">
+          <div className="mb-4 rounded-lg bg-[#EF4444]/10 p-3 text-center text-sm text-[#EF4444] border border-[#EF4444]/20">
             {error}
           </div>
         )}
@@ -71,7 +71,7 @@ function Login() {
           <button
             onClick={handleFeishuLogin}
             disabled={loading}
-            className="flex w-full max-w-xs items-center justify-center gap-3 rounded-lg bg-[#3370ff] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#2860e0] disabled:opacity-50"
+            className="flex w-full max-w-xs items-center justify-center gap-3 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[#22C55E]/90 disabled:opacity-50 cursor-pointer glow-border"
           >
             {loading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -84,9 +84,9 @@ function Login() {
           </button>
         </div>
 
-        <div className="mt-6 text-center text-xs text-gray-400">
+        <div className="mt-6 text-center text-xs text-[#475569]">
           <p>中科创达企业账号登录</p>
-          <p className="mt-1">ThunderSoft Enterprise Account</p>
+          <p className="mt-1 font-mono">ThunderSoft Enterprise Account</p>
         </div>
       </div>
       <LogViewer />
