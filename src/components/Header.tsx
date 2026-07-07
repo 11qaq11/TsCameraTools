@@ -1,16 +1,14 @@
 import { useLocation } from 'react-router-dom'
-
-const pageTitles: Record<string, string> = {
-  '/': '设备连接',
-}
+import { navItems } from '../config/navigation'
 
 function Header() {
   const location = useLocation()
-  const title = pageTitles[location.pathname] || 'TsCameraTools'
+  const currentItem = navItems.find(item => item.path === location.pathname)
+  const title = currentItem?.label || 'TsCameraTools'
 
   return (
-    <header className="flex h-14 items-center border-b border-[#334155] bg-[#1E293B] px-6">
-      <h2 className="text-lg font-semibold text-white font-mono">{title}</h2>
+    <header className="flex h-14 items-center border-b border-[var(--color-border)] bg-[var(--color-card-bg)] px-6">
+      <h2 className="text-lg font-semibold text-[var(--color-text-primary)] font-mono">{title}</h2>
     </header>
   )
 }

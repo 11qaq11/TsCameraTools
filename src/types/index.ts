@@ -1,3 +1,13 @@
+export interface NavItem {
+  id: string
+  label: string
+  icon: React.ReactNode
+  path: string
+  group?: string
+  badge?: string | number
+  children?: NavItem[]
+}
+
 export interface AdbDevice {
   serial: string
   model: string

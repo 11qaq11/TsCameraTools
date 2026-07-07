@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url'
 import authRoutes from './routes/auth.js'
 import adbRoutes from './routes/adb.js'
 import logRoutes from './routes/logs.js'
-import { setupShellSocket } from './services/shell.js'
+import ttydRoutes from './routes/ttyd.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -17,7 +17,6 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// CORS 配置
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
@@ -25,17 +24,15 @@ app.use(cors({
 
 app.use(express.json())
 
-// 路由
 app.use('/auth', authRoutes)
 app.use('/api/adb', adbRoutes)
 app.use('/api/logs', logRoutes)
+app.use('/api/ttyd', ttydRoutes)
 
-// 健康检查
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })
 })
 
-// HTTPS 配置
 const useHttps = process.env.HTTPS === 'true'
 let server
 
@@ -50,7 +47,6 @@ if (useHttps) {
   server = createHttpServer(app)
 }
 
-// Socket.io 配置
 const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -59,10 +55,13 @@ const io = new Server(server, {
   }
 })
 
-// WebSocket 终端会话
-setupShellSocket(io)
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id)
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id)
+  })
+})
 
-// 启动服务器
 server.listen(PORT, () => {
   console.log(`🚀 服务器运行在 ${useHttps ? 'https' : 'http'}://localhost:${PORT}`)
 })

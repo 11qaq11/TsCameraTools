@@ -17,7 +17,11 @@
     "server:start": "node dist/server/index.js",
     "web:dev": "concurrently \"vite\" \"tsx watch server/index.ts\"",
     "web:build": "tsc -b && vite build && tsc -p tsconfig.server.json",
-    "web:start": "node dist/server/index.js"
+    "web:start": "node dist/server/index.js",
+    "test": "vitest run",
+    "test:server": "vitest run --config vitest.server.config.ts",
+    "test:all": "vitest run && vitest run --config vitest.server.config.ts",
+    "test:coverage": "vitest run --coverage && vitest run --config vitest.server.config.ts --coverage"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",

@@ -5,7 +5,16 @@ import sessionsReducer, {
   setActiveSession,
   clearSessions,
 } from '../reducers/sessions'
-import type { SessionState } from '../../types/hyper'
+
+interface SessionState {
+  uid: string
+  title: string
+  cols: number
+  rows: number
+  active: boolean
+  shell: string
+  pid: number | null
+}
 
 describe('sessions reducer', () => {
   let initialState: ReturnType<typeof sessionsReducer>

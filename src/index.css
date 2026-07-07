@@ -1,39 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @theme {
-  /* Dark Mode (OLED) Design System */
-  --color-primary: #1E293B;
-  --color-primary-hover: #334155;
-  --color-primary-light: #272F42;
-  --color-sidebar-bg: #0F172A;
-  --color-sidebar-hover: #1E293B;
-  --color-sidebar-active: #22C55E;
-  --color-content-bg: #0F172A;
-  --color-card-bg: #1E293B;
-  --color-border: #334155;
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #94A3B8;
-  --color-text-sidebar: #CBD5E1;
-  --color-text-sidebar-active: #FFFFFF;
-  --color-accent-green: #22C55E;
-  --color-accent-orange: #F59E0B;
-  --color-accent-red: #EF4444;
-  --color-accent-purple: #8B5CF6;
-  --color-accent-blue: #3B82F6;
-  --color-accent-cyan: #06B6D4;
-  --color-background: #0F172A;
-  --color-foreground: #F8FAFC;
-  --color-muted: #272F42;
+  /* Light Mode Design System */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #EFF6FF;
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-hover: #F1F5F9;
+  --color-sidebar-active: #EFF6FF;
+  --color-content-bg: #F8FAFC;
+  --color-card-bg: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-sidebar: #475569;
+  --color-text-sidebar-active: #2563EB;
+  --color-accent-green: #16A34A;
+  --color-accent-orange: #EA580C;
+  --color-accent-red: #DC2626;
+  --color-accent-purple: #9333EA;
+  --color-accent-blue: #2563EB;
+  --color-accent-cyan: #0891B2;
+  --color-background: #F8FAFC;
+  --color-foreground: #0F172A;
+  --color-muted: #F1F5F9;
 }
 
 body {
   margin: 0;
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0F172A;
-  color: #F8FAFC;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
 }
 
 /* Terminal font */
@@ -43,22 +43,22 @@ body {
 
 /* Glow effect */
 .glow-text {
-  text-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  text-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
 }
 
 .glow-border {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
 }
 
 .glow-accent {
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.15);
 }
 
 /* Gradient border */
 .gradient-border {
   border: 1px solid transparent;
-  background: linear-gradient(#1E293B, #1E293B) padding-box,
-              linear-gradient(135deg, #22C55E, #3B82F6) border-box;
+  background: linear-gradient(#FFFFFF, #FFFFFF) padding-box,
+              linear-gradient(135deg, #2563EB, #3B82F6) border-box;
 }
 
 /* Scrollbar */
@@ -68,27 +68,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F172A;
+  background: var(--color-background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--color-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #CBD5E1;
 }
 
 /* Selection */
 ::selection {
-  background: rgba(34, 197, 94, 0.3);
-  color: #F8FAFC;
+  background: rgba(37, 99, 235, 0.2);
+  color: var(--color-text-primary);
 }
 
 /* Focus visible */
 *:focus-visible {
-  outline: 2px solid #22C55E;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -121,8 +121,8 @@ body {
 
 /* Pulse glow */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+  0%, 100% { box-shadow: 0 0 5px rgba(37, 99, 235, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(37, 99, 235, 0.4); }
 }
 
 .pulse-glow {

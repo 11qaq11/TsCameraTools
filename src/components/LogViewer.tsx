@@ -38,7 +38,7 @@ export function LogViewer() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-[#1E293B] text-[#22C55E] shadow-lg border border-[#334155] hover:bg-[#334155] transition-colors cursor-pointer pulse-glow"
+        className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-card-bg)] text-[var(--color-primary)] shadow-lg border border-[var(--color-border)] hover:bg-[var(--color-sidebar-hover)] transition-colors cursor-pointer pulse-glow"
         title="查看操作日志"
       >
         <Terminal size={18} />
@@ -47,27 +47,27 @@ export function LogViewer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex h-[400px] w-[600px] flex-col rounded-lg border border-[#334155] shadow-2xl" style={{ backgroundColor: '#1E293B' }}>
-      <div className="flex items-center justify-between border-b border-[#334155] px-3 py-2">
-        <span className="text-xs font-medium text-white font-mono">操作日志</span>
+    <div className="fixed bottom-4 right-4 z-50 flex h-[400px] w-[600px] flex-col rounded-lg border border-[var(--color-border)] shadow-2xl bg-[var(--color-card-bg)]">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2">
+        <span className="text-xs font-medium text-[var(--color-text-primary)] font-mono">操作日志</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setPinned(!pinned)}
-            className={`rounded p-1 transition-colors cursor-pointer ${pinned ? 'text-[#22C55E] bg-[#22C55E]/10' : 'text-[#94A3B8] hover:bg-[#334155]'}`}
+            className={`rounded p-1 transition-colors cursor-pointer ${pinned ? 'text-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)]'}`}
             title={pinned ? "取消自动滚动" : "自动滚动到底部"}
           >
             {pinned ? <Pin size={14} /> : <PinOff size={14} />}
           </button>
           <button
             onClick={() => { logger.clearLogs(); setLogs([]) }}
-            className="rounded p-1 text-[#94A3B8] hover:bg-[#334155] hover:text-white cursor-pointer"
+            className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
             title="清除日志"
           >
             <Trash2 size={14} />
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="rounded p-1 text-[#94A3B8] hover:bg-[#334155] hover:text-white cursor-pointer"
+            className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -76,18 +76,17 @@ export function LogViewer() {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-relaxed"
-        style={{ backgroundColor: '#0F172A' }}
+        className="flex-1 overflow-y-auto p-2 font-mono text-[11px] leading-relaxed bg-[var(--color-background)]"
       >
         {logs.length === 0 && (
-          <p className="text-[#475569]">暂无日志</p>
+          <p className="text-[var(--color-text-secondary)]">暂无日志</p>
         )}
         {logs.map((line, i) => {
-          let color = '#94A3B8'
-          if (line.includes('[ERROR]')) color = '#EF4444'
-          else if (line.includes('[WARN]')) color = '#F59E0B'
-          else if (line.includes('===')) color = '#3B82F6'
-          else if (line.includes('[Shell]')) color = '#22C55E'
+          let color = 'var(--color-text-secondary)'
+          if (line.includes('[ERROR]')) color = 'var(--color-accent-red)'
+          else if (line.includes('[WARN]')) color = 'var(--color-accent-orange)'
+          else if (line.includes('===')) color = 'var(--color-primary)'
+          else if (line.includes('[Shell]')) color = 'var(--color-accent-green)'
           return <p key={i} style={{ color }}>{line}</p>
         })}
       </div>

@@ -47,31 +47,28 @@ function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#0F172A' }}>
-      <div className="w-full max-w-md rounded-2xl border border-[#334155] p-8 shadow-2xl gradient-border" style={{ backgroundColor: '#1E293B' }}>
-        {/* 左上角图标 */}
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)]">
+      <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] p-8 shadow-2xl gradient-border bg-[var(--color-card-bg)]">
         <div className="mb-6">
           <img src={logoImg} alt="ThunderSoft" className="h-5 w-auto" />
         </div>
         
-        {/* 居中标题 */}
         <div className="mb-8 text-center">
-          <h1 className="text-xl font-bold text-white font-mono tracking-wider glow-text">TsCameraTools</h1>
-          <p className="mt-2 text-sm text-[#94A3B8]">影像开发工具箱</p>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)] font-mono tracking-wider glow-text">TsCameraTools</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">影像开发工具箱</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-[#EF4444]/10 p-3 text-center text-sm text-[#EF4444] border border-[#EF4444]/20">
+          <div className="mb-4 rounded-lg bg-[var(--color-accent-red)]/10 p-3 text-center text-sm text-[var(--color-accent-red)] border border-[var(--color-accent-red)]/20">
             {error}
           </div>
         )}
 
-        {/* 居中按钮 */}
         <div className="flex justify-center">
           <button
             onClick={handleFeishuLogin}
             disabled={loading}
-            className="flex w-full max-w-xs items-center justify-center gap-3 rounded-lg bg-[#22C55E] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[#22C55E]/90 disabled:opacity-50 cursor-pointer glow-border"
+            className="flex w-full max-w-xs items-center justify-center gap-3 rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-50 cursor-pointer glow-border"
           >
             {loading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -84,7 +81,7 @@ function Login() {
           </button>
         </div>
 
-        <div className="mt-6 text-center text-xs text-[#475569]">
+        <div className="mt-6 text-center text-xs text-[var(--color-text-secondary)]">
           <p>中科创达企业账号登录</p>
           <p className="mt-1 font-mono">ThunderSoft Enterprise Account</p>
         </div>

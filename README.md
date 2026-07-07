@@ -5,10 +5,11 @@
 ## 功能特性
 
 - ADB 设备检测/安装/连接
-- 交互式 Shell 终端（xterm.js）
+- ttyd Web 终端（iframe 嵌入，支持中文输入、ZMODEM 文件传输、Sixel 图像输出）
 - 飞书 OAuth 登录
+- Light 主题设计（蓝色主色调 #2563EB）
+- 可扩展左侧导航栏（数据驱动配置）
 - 命令历史记录（最多 300 条）
-- 中文输入支持
 - 历史命令搜索（Ctrl+R）
 
 ## 快速开始
@@ -113,6 +114,11 @@ FEISHU_APP_SECRET=your_app_secret
 
 # ADB 路径（可选）
 ADB_PATH=/path/to/adb
+
+# ttyd 终端配置
+TTYD_PORT_START=7681
+TTYD_PORT_END=7690
+TTYD_CREDENTIAL=admin:admin
 ```
 
 ## 开发规范
@@ -143,6 +149,13 @@ type: description
 - 禁止直接向 master 推送代码
 - 禁止对 master 强制推送
 - PR 合并前确保 `npm run build` 通过
+
+## 已知问题
+
+- **终端连接失败**：ttyd 终端通过 iframe 嵌入，点击 Connect 后可能因 ttyd 进程启动超时或端口冲突导致连接失败。需检查 `bin/ttyd/ttyd.exe` 是否存在，以及端口 7681-7690 是否被占用。
+- Shell 终端使用 iframe 模式（ttyd），与旧版本的本地回显模式不同
+- 中文输入法支持依赖 ttyd 原生 IME 处理
+- WebSocket 连接在后端启动前有短暂报错（不影响功能）
 
 ## 许可证
 

@@ -1,11 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Smartphone, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import logoImg from './headerLogo.png'
-
-const navItems = [
-  { id: 'devices', label: '设备连接', icon: <Smartphone size={20} />, path: '/' },
-]
+import { navItems } from '../config/navigation'
 
 function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
@@ -13,23 +10,22 @@ function Sidebar() {
 
   return (
     <aside
-      className={`flex flex-col transition-all duration-300 ${
+      className={`flex flex-col transition-all duration-300 bg-[var(--color-sidebar-bg)] border-r border-[var(--color-border)] ${
         collapsed ? 'w-16' : 'w-60'
       }`}
-      style={{ backgroundColor: '#0F172A', borderRight: '1px solid #334155' }}
     >
       <div className="flex h-14 items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
             <img src={logoImg} alt="ThunderSoft" className="h-6 w-auto" />
-            <h1 className="text-sm font-bold text-white font-mono tracking-wider truncate">
+            <h1 className="text-sm font-bold text-[var(--color-text-primary)] font-mono tracking-wider truncate">
               TsCameraTools
             </h1>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="rounded p-1 text-gray-400 hover:bg-[#1E293B] hover:text-white cursor-pointer"
+          className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
@@ -44,8 +40,8 @@ function Sidebar() {
               const isActive = location.pathname === item.path
               return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-[#22C55E] text-white glow-accent'
-                  : 'text-[#CBD5E1] hover:bg-[#1E293B] hover:text-white'
+                  ? 'bg-[var(--color-sidebar-active)] text-[var(--color-text-sidebar-active)] glow-accent'
+                  : 'text-[var(--color-text-sidebar)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)]'
               } ${collapsed ? 'justify-center' : ''}`
             }}
             title={collapsed ? item.label : undefined}
@@ -56,9 +52,9 @@ function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-[#334155] p-4">
+      <div className="border-t border-[var(--color-border)] p-4">
         {!collapsed && (
-          <p className="text-xs text-[#94A3B8] font-mono">v0.1.0</p>
+          <p className="text-xs text-[var(--color-text-secondary)] font-mono">v0.1.0</p>
         )}
       </div>
     </aside>

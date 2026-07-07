@@ -18,5 +18,12 @@ export const config = {
   // ADB 配置
   adb: {
     path: process.env.ADB_PATH || 'adb'
+  },
+
+  // ttyd 配置
+  ttyd: {
+    portStart: parseInt(process.env.TTYD_PORT_START || '7681'),
+    portEnd: parseInt(process.env.TTYD_PORT_END || '7690'),
+    credential: process.env.TTYD_CREDENTIAL || 'admin:admin'
   }
 }
