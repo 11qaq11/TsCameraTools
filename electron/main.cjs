@@ -199,6 +199,13 @@ ipcMain.on('adb:shell:kill', (_event, id) => {
   if (proc) { proc.kill(); shells.delete(id) }
 })
 
+ipcMain.on('adb:shell:flush-stdin', (_event, id) => {
+  const proc = shells.get(id)
+  if (proc && proc.stdin && !proc.stdin.destroyed) {
+    proc.stdin.write('\x03\n')
+  }
+})
+
 // History: load from file
 ipcMain.handle('history:load', async () => {
   const historyPath = path.join(process.cwd(), '.adb-command-history.json')

@@ -99,7 +99,7 @@ export default function HyperTerminal({
       socket.off('shell:exit', handleExit)
       socket.off('shell:started', handleStarted)
     }
-  }, [socket, shellId, writePrompt])
+  }, [socket, shellId, serial, writePrompt])
 
   // 处理终端输入（本地回显模式）
   const handleData = useCallback((data: string) => {

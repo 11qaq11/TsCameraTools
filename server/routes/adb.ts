@@ -9,7 +9,7 @@ router.get('/check', (req, res) => {
   const adbPath = config.adb.path
   console.log('[ADB] Checking ADB at path:', adbPath)
   
-  exec(`"${adbPath}" version`, (error, stdout, stderr) => {
+  exec(`"${adbPath}" version`, (error, stdout, _stderr) => {
     if (error) {
       console.log('[ADB] Check failed:', error.message)
       res.json({ available: false, message: 'ADB not found' })
@@ -25,7 +25,7 @@ router.get('/check', (req, res) => {
 router.get('/devices', (req, res) => {
   const adbPath = config.adb.path
   
-  exec(`"${adbPath}" devices`, (error, stdout, stderr) => {
+  exec(`"${adbPath}" devices`, (error, stdout, _stderr) => {
     if (error) {
       return res.status(500).json({ error: 'Failed to get devices' })
     }

@@ -125,7 +125,7 @@ export function setupShellSocket(io: Server) {
       }
     })
 
-    socket.on('shell:resize', (data: { sessionId: string; cols: number; rows: number }) => {
+    socket.on('shell:resize', (_data: { sessionId: string; cols: number; rows: number }) => {
       // child_process 不支持 resize，但不影响功能
     })
 

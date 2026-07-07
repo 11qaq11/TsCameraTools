@@ -23,6 +23,7 @@ export interface ElectronAPI {
   adbShellStart: (serial: string) => Promise<string | null>
   adbShellWrite: (id: string, data: string) => void
   adbShellKill: (id: string) => void
+  adbShellFlushStdin: (id: string) => void
   onShellData: (callback: (id: string, data: string) => void) => void
   onShellExit: (callback: (id: string) => void) => void
   loadHistory: () => Promise<HistoryResult>

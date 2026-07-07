@@ -80,7 +80,7 @@ router.get('/files', (req, res) => {
       .sort((a, b) => b.modified.getTime() - a.modified.getTime())
     
     res.json({ files })
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Failed to list log files' })
   }
 })

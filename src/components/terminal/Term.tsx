@@ -304,6 +304,7 @@ const Term = forwardRef<TermRef, TermProps>(({
     } catch (err) {
       logger.error('Term', `Failed to initialize terminal: ${err}`)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]) // 只在 uid 变化时重新初始化
 
   // 更新主题
