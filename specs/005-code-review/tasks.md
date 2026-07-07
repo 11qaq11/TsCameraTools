@@ -114,40 +114,40 @@
 
 ### Phase 2.1: 项目文档
 
-- [ ] T083 更新 README.md - 项目结构、功能说明、快速开始、技术栈
-- [ ] T084 更新 README-WEB.md - Web 模式文档
-- [ ] T085 更新 AGENTS.md - 开发准则、架构速查
-- [ ] T086 更新 specs/ 目录下所有规范文档状态
+- [x] T083 更新 README.md - 项目结构、功能说明、快速开始、技术栈
+- [x] T084 更新 README-WEB.md - Web 模式文档
+- [x] T085 更新 AGENTS.md - 开发准则、架构速查
+- [x] T086 更新 specs/ 目录下所有规范文档状态
 
 ### Phase 2.2: 开发规范
 
-- [ ] T087 创建代码风格规范文档
-- [ ] T088 创建 Git 工作流规范文档
-- [ ] T089 创建测试规范文档
-- [ ] T090 创建文档规范文档
-- [ ] T091 创建安全规范文档
+- [x] T087 创建代码风格规范文档
+- [x] T088 创建 Git 工作流规范文档
+- [x] T089 创建测试规范文档
+- [x] T090 创建文档规范文档
+- [x] T091 创建安全规范文档
 
 ### Phase 2.3: 上下文记忆文件
 
-- [ ] T092 创建 .specify/memory/constitution.md - 项目开发规范宪法
-- [ ] T093 创建 .specify/memory/decisions.md - 技术决策记录
-- [ ] T094 创建 .specify/memory/conventions.md - 代码约定
-- [ ] T095 创建 .specify/memory/api-docs.md - API 文档
+- [x] T092 创建 .specify/memory/constitution.md - 项目开发规范宪法
+- [x] T093 创建 .specify/memory/decisions.md - 技术决策记录
+- [x] T094 创建 .specify/memory/conventions.md - 代码约定
+- [x] T095 创建 .specify/memory/api-docs.md - API 文档
 
 ## Phase 3: 自动化测试
 
 ### Phase 3.1: 测试配置
 
-- [ ] T096 安装测试依赖 - vitest, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, playwright
-- [ ] T097 创建测试配置 - vitest.config.ts, playwright.config.ts
-- [ ] T098 创建测试工具 - test-utils.tsx, mock-utils.ts
+- [x] T096 安装测试依赖 - vitest, @testing-library/react, @testing-library/jest-dom, @testing-library/user-event, playwright
+- [x] T097 创建测试配置 - vitest.config.ts, playwright.config.ts
+- [x] T098 创建测试工具 - test-utils.tsx, mock-utils.ts
 
 ### Phase 3.2: 单元测试
 
-- [ ] T099 [P] 创建 src/utils/auth.test.ts - Token 管理、API 请求测试
-- [ ] T100 [P] 创建 src/utils/logger.test.ts - 日志工具测试
-- [ ] T101 [P] 创建 src/store/reducers/ui.test.ts - UI 状态管理测试
-- [ ] T102 [P] 创建 src/store/reducers/sessions.test.ts - 会话状态管理测试
+- [x] T099 [P] 创建 src/utils/auth.test.ts - Token 管理、API 请求测试
+- [x] T100 [P] 创建 src/utils/logger.test.ts - 日志工具测试
+- [x] T101 [P] 创建 src/store/reducers/ui.test.ts - UI 状态管理测试
+- [x] T102 [P] 创建 src/store/reducers/sessions.test.ts - 会话状态管理测试
 - [ ] T103 [P] 创建 src/hooks/useAuth.test.ts - 认证 Hook 测试
 - [ ] T104 [P] 创建 src/hooks/useSocket.test.ts - Socket Hook 测试
 - [ ] T105 [P] 创建 src/hooks/useTerminal.test.ts - 终端 Hook 测试
@@ -155,16 +155,16 @@
 
 ### Phase 3.3: 组件测试
 
-- [ ] T107 [P] 创建 src/App.test.tsx - 路由渲染测试
-- [ ] T108 [P] 创建 src/components/ErrorBoundary.test.tsx - 错误边界测试
-- [ ] T109 [P] 创建 src/components/Sidebar.test.tsx - 侧边栏测试
-- [ ] T110 [P] 创建 src/components/Header.test.tsx - 顶部栏测试
-- [ ] T111 [P] 创建 src/components/LogViewer.test.tsx - 日志查看器测试
+- [x] T107 [P] 创建 src/App.test.tsx - 路由渲染测试
+- [x] T108 [P] 创建 src/components/ErrorBoundary.test.tsx - 错误边界测试
+- [x] T109 [P] 创建 src/components/Sidebar.test.tsx - 侧边栏测试
+- [x] T110 [P] 创建 src/components/Header.test.tsx - 顶部栏测试
+- [x] T111 [P] 创建 src/components/LogViewer.test.tsx - 日志查看器测试
 - [ ] T112 [P] 创建 src/components/terminal/Term.test.tsx - 终端渲染测试
 - [ ] T113 [P] 创建 src/components/terminal/HyperTerminal.test.tsx - 终端组件测试
-- [ ] T114 [P] 创建 src/components/terminal/SearchBox.test.tsx - 搜索框测试
-- [ ] T115 [P] 创建 src/components/terminal/StatusBar.test.tsx - 状态栏测试
-- [ ] T116 [P] 创建 src/components/terminal/Header.test.tsx - 终端头部测试
+- [x] T114 [P] 创建 src/components/terminal/SearchBox.test.tsx - 搜索框测试
+- [x] T115 [P] 创建 src/components/terminal/StatusBar.test.tsx - 状态栏测试
+- [x] T116 [P] 创建 src/components/terminal/Header.test.tsx - 终端头部测试
 
 ### Phase 3.4: 集成测试
 
