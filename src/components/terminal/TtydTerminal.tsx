@@ -10,24 +10,51 @@ interface TtydTerminalProps {
 export default function TtydTerminal({ serial, onClose }: TtydTerminalProps) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [ttydUrl, setTtydUrl] = useState('')
-  const [sessionId, setSessionId] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const sessionIdRef = useRef('')
+
+  const stopTtyd = useCallback(async () => {
+    const sid = sessionIdRef.current
+    if (sid) {
+      logger.info('TtydTerminal', `stopTtyd: stopping session ${sid}`)
+      try {
+        await fetchWithAuth('/api/ttyd/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid }),
+        })
+        logger.info('TtydTerminal', `Session stopped: ${sid}`)
+      } catch (err) {
+        logger.warn('TtydTerminal', `stopTtyd: cleanup error (ignored)`, { error: String(err) })
+      }
+      sessionIdRef.current = ''
+    }
+  }, [])
 
   const startTtyd = useCallback(async () => {
+    await stopTtyd()
     setStatus('loading')
+    logger.info('TtydTerminal', `startTtyd: requesting session for serial=${serial}`)
+
     try {
+      const startTime = Date.now()
       const res = await fetchWithAuth('/api/ttyd/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serial }),
       })
+      const elapsed = Date.now() - startTime
+      logger.info('TtydTerminal', `startTtyd: response received in ${elapsed}ms, status=${res.status}`)
+
       const data = await res.json() as { success: boolean; url?: string; sessionId?: string; error?: string }
+      logger.info('TtydTerminal', 'startTtyd: response data', data)
+
       if (data.success && data.url && data.sessionId) {
+        sessionIdRef.current = data.sessionId
         setTtydUrl(data.url)
-        setSessionId(data.sessionId)
         setStatus('ready')
-        logger.info('TtydTerminal', `Session started: ${data.sessionId}`)
+        logger.info('TtydTerminal', `Session started: ${data.sessionId}, url=${data.url}`)
       } else {
         setErrorMsg(data.error || 'Failed to start ttyd')
         setStatus('error')
@@ -38,31 +65,25 @@ export default function TtydTerminal({ serial, onClose }: TtydTerminalProps) {
       setStatus('error')
       logger.error('TtydTerminal', `Start error: ${err}`)
     }
-  }, [serial])
-
-  const stopTtyd = useCallback(async () => {
-    if (sessionId) {
-      try {
-        await fetchWithAuth('/api/ttyd/stop', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-        })
-        logger.info('TtydTerminal', `Session stopped: ${sessionId}`)
-      } catch {
-        // ignore cleanup errors
-      }
-    }
-  }, [sessionId])
+  }, [serial, stopTtyd])
 
   useEffect(() => {
     startTtyd()
     return () => {
       stopTtyd()
     }
-  }, [startTtyd, stopTtyd])
+  }, [])
+
+  const handleIframeLoad = useCallback(() => {
+    logger.info('TtydTerminal', `iframe loaded: url=${ttydUrl}`)
+  }, [ttydUrl])
+
+  const handleIframeError = useCallback(() => {
+    logger.error('TtydTerminal', `iframe error: url=${ttydUrl}`)
+  }, [ttydUrl])
 
   const handleClose = async () => {
+    logger.info('TtydTerminal', 'handleClose: disconnecting')
     await stopTtyd()
     onClose()
   }
@@ -114,13 +135,17 @@ export default function TtydTerminal({ serial, onClose }: TtydTerminalProps) {
           断开连接
         </button>
       </div>
-      <iframe
-        ref={iframeRef}
-        src={ttydUrl}
-        className="flex-1 w-full border-none"
-        title={`ttyd - ${serial}`}
-        allow="clipboard-read; clipboard-write"
-      />
+      <div className="flex-1 relative">
+        <iframe
+          ref={iframeRef}
+          src={ttydUrl}
+          className="w-full h-full border-none"
+          title={`ttyd - ${serial}`}
+          allow="clipboard-read; clipboard-write"
+          onLoad={handleIframeLoad}
+          onError={handleIframeError}
+        />
+      </div>
     </div>
   )
 }

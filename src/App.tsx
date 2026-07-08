@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout'
 import { isAuthenticated } from './utils/auth'
 
 const Devices = lazy(() => import('./pages/DevicesWeb'))
+const LocalTerminal = lazy(() => import('./pages/LocalTerminal'))
 const Login = lazy(() => import('./pages/Login'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 
@@ -34,6 +35,7 @@ function App() {
           </ProtectedRoute>
         }>
           <Route index element={<Devices />} />
+          <Route path="terminal" element={<LocalTerminal />} />
         </Route>
       </Routes>
     </Suspense>

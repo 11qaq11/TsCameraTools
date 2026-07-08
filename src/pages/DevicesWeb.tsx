@@ -194,28 +194,10 @@ function DevicesWeb() {
   return (
     <div className="flex flex-col h-full">
       {activeShell ? (
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 bg-[var(--color-card-bg)] border-b border-[var(--color-border)]">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[var(--color-accent-green)] animate-pulse"></div>
-              <span className="text-sm font-mono text-[var(--color-text-secondary)]">
-                {activeShell.serial}
-              </span>
-            </div>
-            <button
-              onClick={handleDisconnect}
-              className="px-3 py-1 text-xs text-[var(--color-accent-red)] hover:bg-[var(--color-accent-red)]/10 rounded transition-colors cursor-pointer"
-            >
-              断开连接
-            </button>
-          </div>
-          <div className="flex-1">
-            <TtydTerminal
-              serial={activeShell.serial}
-              onClose={handleDisconnect}
-            />
-          </div>
-        </div>
+        <TtydTerminal
+          serial={activeShell.serial}
+          onClose={handleDisconnect}
+        />
       ) : (
         <div className="flex-1 p-6">
           <div className="flex items-center justify-between mb-6">
