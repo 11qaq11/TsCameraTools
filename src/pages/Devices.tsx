@@ -119,10 +119,36 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           brightCyan: '#06B6D4',
           brightWhite: '#FFFFFF',
         },
+        allowProposedApi: true,
       })
       fitAddon = new FitAddon()
       term.loadAddon(fitAddon)
       term.open(termRef.current!)
+
+      // Handle Ctrl+Insert (copy) and Shift+Insert (paste) at DOM level
+      term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+        // Ctrl+Insert: copy selected text
+        if (event.ctrlKey && event.key === 'Insert' && event.type === 'keydown') {
+          const selection = term.getSelection()
+          if (selection) {
+            navigator.clipboard.writeText(selection)
+          }
+          return false
+        }
+        // Shift+Insert: paste from clipboard
+        if (event.shiftKey && event.key === 'Insert' && event.type === 'keydown') {
+          navigator.clipboard.readText().then((text) => {
+            if (text) {
+              inputBuffer.current += text
+              cursorPos.current += text.length
+              term.write(text)
+            }
+          })
+          return false
+        }
+        return true
+      })
+
       term.focus()
       fitAddon.fit()
       xtermRef.current = term
@@ -327,21 +353,6 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           inputBuffer.current = ''
           cursorPos.current = 0
           if (promptTimer) clearTimeout(promptTimer)
-          return
-        }
-        // Ctrl+Insert - copy selected text
-        if (data === '\x1b[2;5~') {
-          const selection = term.getSelection()
-          if (selection) {
-            navigator.clipboard.writeText(selection)
-          }
-          return
-        }
-        // Shift+Insert - paste
-        if (data === '\x1b[2;2~') {
-          navigator.clipboard.readText().then((t) => {
-            if (t) { inputBuffer.current += t; cursorPos.current += t.length; term.write(t) }
-          })
           return
         }
         // Ctrl+A - home
