@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js'
 import adbRoutes from './routes/adb.js'
 import logRoutes from './routes/logs.js'
 import ttydRoutes from './routes/ttyd.js'
+import debugRoutes from './routes/debug.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -28,6 +29,7 @@ app.use('/auth', authRoutes)
 app.use('/api/adb', adbRoutes)
 app.use('/api/logs', logRoutes)
 app.use('/api/ttyd', ttydRoutes)
+app.use('/api/debug', debugRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })
