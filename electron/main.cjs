@@ -159,11 +159,15 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
   const proc = spawn(adb, ['-s', serial, 'shell'], {
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: false,
+    env: { ...process.env, LANG: 'en_US.UTF-8' },
   })
   shells.set(id, proc)
 
   proc.stdout.setEncoding('utf-8')
   proc.stderr.setEncoding('utf-8')
+
+  // 设置 stdin 编码为 utf-8
+  proc.stdin.setDefaultEncoding('utf-8')
 
   proc.stdout.on('data', (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
