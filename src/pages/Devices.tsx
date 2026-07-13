@@ -95,7 +95,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
 
       term = new Terminal({
         fontSize: 14,
-        fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace",
+        fontFamily: "'JetBrainsMono Nerd Font Mono', 'Cascadia Code', 'DengXian', 'Microsoft YaHei', monospace",
         theme: {
           background: '#FFFFFF',
           foreground: '#0F172A',
