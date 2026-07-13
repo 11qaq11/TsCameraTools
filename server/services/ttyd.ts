@@ -4,7 +4,9 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { v4 as uuidv4 } from 'uuid'
-import { debugLog } from '../utils/debug-logger.js'
+import { createChildLogger } from '../utils/logger.js'
+
+const log = createChildLogger({ context: 'Ttyd' })
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,21 +51,21 @@ function isPortAvailable(port: number): Promise<boolean> {
 async function findAvailablePort(): Promise<number | null> {
   const start = getPortStart()
   const end = getPortEnd()
-  debugLog('Ttyd', `findAvailablePort: scanning range ${start}-${end}`)
+  log.debug(`findAvailablePort: scanning range ${start}-${end}`)
   for (let port = start; port <= end; port++) {
     const available = await isPortAvailable(port)
-    debugLog('Ttyd', `  port ${port}: ${available ? 'available' : 'in use'}`)
+    log.debug(`  port ${port}: ${available ? 'available' : 'in use'}`)
     if (available) {
-      debugLog('Ttyd', `findAvailablePort: selected port ${port}`)
+      log.debug(`findAvailablePort: selected port ${port}`)
       return port
     }
   }
-  debugLog('Ttyd', 'findAvailablePort: no available port')
+  log.debug('findAvailablePort: no available port')
   return null
 }
 
 function waitForReady(port: number, timeoutMs = 5000): Promise<boolean> {
-  debugLog('Ttyd', `waitForReady: checking port ${port}, timeout=${timeoutMs}ms`)
+  log.debug(`waitForReady: checking port ${port}, timeout=${timeoutMs}ms`)
   return new Promise((resolve) => {
     const startTime = Date.now()
     let attempts = 0
@@ -71,17 +73,17 @@ function waitForReady(port: number, timeoutMs = 5000): Promise<boolean> {
       attempts++
       try {
         const res = await fetch(`http://127.0.0.1:${port}/`)
-        debugLog('Ttyd', `waitForReady: attempt ${attempts}, status=${res.status}, elapsed=${Date.now() - startTime}ms`)
+        log.debug(`waitForReady: attempt ${attempts}, status=${res.status}, elapsed=${Date.now() - startTime}ms`)
         if (res.ok) {
-          debugLog('Ttyd', `waitForReady: ready after ${attempts} attempts, ${Date.now() - startTime}ms`)
+          log.debug(`waitForReady: ready after ${attempts} attempts, ${Date.now() - startTime}ms`)
           resolve(true)
           return
         }
       } catch (err) {
-        debugLog('Ttyd', `waitForReady: attempt ${attempts}, not ready yet, elapsed=${Date.now() - startTime}ms`, { error: String(err) })
+        log.debug({ error: String(err) }, `waitForReady: attempt ${attempts}, not ready yet, elapsed=${Date.now() - startTime}ms`)
       }
       if (Date.now() - startTime > timeoutMs) {
-        debugLog('Ttyd', `waitForReady: TIMEOUT after ${attempts} attempts, ${Date.now() - startTime}ms`)
+        log.debug(`waitForReady: TIMEOUT after ${attempts} attempts, ${Date.now() - startTime}ms`)
         resolve(false)
         return
       }
@@ -94,7 +96,7 @@ function waitForReady(port: number, timeoutMs = 5000): Promise<boolean> {
 export function checkBinary(): { available: boolean; version: string; path: string } {
   const ttydPath = getTtydPath()
   const available = fs.existsSync(ttydPath)
-  debugLog('Ttyd', `checkBinary: path=${ttydPath}, available=${available}`)
+  log.debug(`checkBinary: path=${ttydPath}, available=${available}`)
   return {
     available,
     version: '1.7.7',
@@ -103,17 +105,17 @@ export function checkBinary(): { available: boolean; version: string; path: stri
 }
 
 export async function startSession(serial: string): Promise<{ sessionId: string; port: number } | { error: string }> {
-  debugLog('Ttyd', `startSession: serial=${serial}`)
+  log.debug(`startSession: serial=${serial}`)
 
   const binary = checkBinary()
   if (!binary.available) {
-    debugLog('Ttyd', 'startSession: FAILED - ttyd binary not found')
+    log.error('startSession: FAILED - ttyd binary not found')
     return { error: 'ttyd binary not found' }
   }
 
   const port = await findAvailablePort()
   if (port === null) {
-    debugLog('Ttyd', 'startSession: FAILED - no available port')
+    log.error('startSession: FAILED - no available port')
     return { error: 'No available port' }
   }
 
@@ -158,14 +160,14 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
     'adb', '-s', serial, 'shell',
   ]
 
-  debugLog('Ttyd', `startSession: spawning ttyd`, {
+  log.debug({
     sessionId,
     port,
     serial,
     binaryPath: binary.path,
     args: args.join(' '),
     frontendUrl,
-  })
+  }, 'startSession: spawning ttyd')
 
   try {
     const child = spawn(binary.path, args, {
@@ -184,72 +186,72 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
 
     sessions.set(sessionId, session)
 
-    debugLog('Ttyd', `startSession: process spawned, pid=${child.pid}`)
+    log.debug(`startSession: process spawned, pid=${child.pid}`)
 
     child.stdout?.on('data', (data) => {
-      debugLog('Ttyd', `[stdout] ${data.toString().trim()}`)
+      log.debug(`[stdout] ${data.toString().trim()}`)
     })
 
     child.stderr?.on('data', (data) => {
-      debugLog('Ttyd', `[stderr] ${data.toString().trim()}`)
+      log.debug(`[stderr] ${data.toString().trim()}`)
     })
 
     child.on('error', (err) => {
       session.status = 'stopped'
       sessions.delete(sessionId)
-      debugLog('Ttyd', `startSession: process ERROR`, {
+      log.error({
         sessionId,
         pid: child.pid,
         error: err.message,
         stack: err.stack,
-      })
+      }, 'startSession: process ERROR')
       console.error(`[Ttyd] Session ${sessionId} error: ${err.message}`)
     })
 
     child.on('exit', (code, signal) => {
       session.status = 'stopped'
       sessions.delete(sessionId)
-      debugLog('Ttyd', `startSession: process EXIT`, {
+      log.debug({
         sessionId,
         pid: child.pid,
         exitCode: code,
         signal,
-      })
+      }, 'startSession: process EXIT')
       console.log(`[Ttyd] Session ${sessionId} exited with code ${code}`)
     })
 
     const ready = await waitForReady(port)
     if (!ready) {
-      debugLog('Ttyd', `startSession: FAILED - ttyd not ready within timeout, killing process`)
+      log.error('startSession: FAILED - ttyd not ready within timeout, killing process')
       child.kill()
       sessions.delete(sessionId)
       return { error: 'Failed to start ttyd' }
     }
 
     session.status = 'running'
-    debugLog('Ttyd', `startSession: SUCCESS`, { sessionId, port, pid: child.pid })
+    log.info({ sessionId, port, pid: child.pid }, 'startSession: SUCCESS')
     console.log(`[Ttyd] Session ${sessionId} started on port ${port}`)
     return { sessionId, port }
   } catch (err) {
     sessions.delete(sessionId)
-    debugLog('Ttyd', `startSession: EXCEPTION`, { sessionId, error: String(err) })
+    log.error({ sessionId, error: String(err) }, 'startSession: EXCEPTION')
     return { error: `Failed to start ttyd: ${err}` }
   }
 }
 
 export function stopSession(sessionId: string): boolean {
-  debugLog('Ttyd', `stopSession: sessionId=${sessionId}`)
+  log.debug(`stopSession: sessionId=${sessionId}`)
   const session = sessions.get(sessionId)
   if (!session) {
-    debugLog('Ttyd', `stopSession: session not found`)
+    log.debug('stopSession: session not found')
     return false
   }
 
   try {
     session.process.kill()
-    debugLog('Ttyd', `stopSession: process killed, pid=${session.process.pid}`)
+    log.debug(`stopSession: process killed, pid=${session.process.pid}`)
   } catch (err) {
-    debugLog('Ttyd', `stopSession: kill failed (process may already be dead)`, { error: String(err) })
+    log.error({ error: String(err) }, 'stopSession: kill failed (process may already be dead)')
   }
   session.status = 'stopped'
   sessions.delete(sessionId)
@@ -258,28 +260,28 @@ export function stopSession(sessionId: string): boolean {
 }
 
 export function getSessionStatus(sessionId: string): { status: string } | null {
-  debugLog('Ttyd', `getSessionStatus: sessionId=${sessionId}`)
+  log.debug(`getSessionStatus: sessionId=${sessionId}`)
   const session = sessions.get(sessionId)
   if (!session) {
-    debugLog('Ttyd', `getSessionStatus: session not found`)
+    log.debug('getSessionStatus: session not found')
     return null
   }
-  debugLog('Ttyd', `getSessionStatus: status=${session.status}`)
+  log.debug(`getSessionStatus: status=${session.status}`)
   return { status: session.status }
 }
 
 export async function startLocalSession(): Promise<{ sessionId: string; port: number } | { error: string }> {
-  debugLog('Ttyd', 'startLocalSession: starting local shell')
+  log.debug('startLocalSession: starting local shell')
 
   const binary = checkBinary()
   if (!binary.available) {
-    debugLog('Ttyd', 'startLocalSession: FAILED - ttyd binary not found')
+    log.error('startLocalSession: FAILED - ttyd binary not found')
     return { error: 'ttyd binary not found' }
   }
 
   const port = await findAvailablePort()
   if (port === null) {
-    debugLog('Ttyd', 'startLocalSession: FAILED - no available port')
+    log.error('startLocalSession: FAILED - no available port')
     return { error: 'No available port' }
   }
 
@@ -322,13 +324,13 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
     'cmd.exe',
   ]
 
-  debugLog('Ttyd', `startLocalSession: spawning ttyd`, {
+  log.debug({
     sessionId,
     port,
     binaryPath: binary.path,
     args: args.join(' '),
     homeDir,
-  })
+  }, 'startLocalSession: spawning ttyd')
 
   try {
     const child = spawn(binary.path, args, {
@@ -348,55 +350,55 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
 
     sessions.set(sessionId, session)
 
-    debugLog('Ttyd', `startLocalSession: process spawned, pid=${child.pid}`)
+    log.debug(`startLocalSession: process spawned, pid=${child.pid}`)
 
     child.stdout?.on('data', (data) => {
-      debugLog('Ttyd', `[stdout] ${data.toString().trim()}`)
+      log.debug(`[stdout] ${data.toString().trim()}`)
     })
 
     child.stderr?.on('data', (data) => {
-      debugLog('Ttyd', `[stderr] ${data.toString().trim()}`)
+      log.debug(`[stderr] ${data.toString().trim()}`)
     })
 
     child.on('error', (err) => {
       session.status = 'stopped'
       sessions.delete(sessionId)
-      debugLog('Ttyd', `startLocalSession: process ERROR`, {
+      log.error({
         sessionId,
         pid: child.pid,
         error: err.message,
         stack: err.stack,
-      })
+      }, 'startLocalSession: process ERROR')
       console.error(`[Ttyd] Local session ${sessionId} error: ${err.message}`)
     })
 
     child.on('exit', (code, signal) => {
       session.status = 'stopped'
       sessions.delete(sessionId)
-      debugLog('Ttyd', `startLocalSession: process EXIT`, {
+      log.debug({
         sessionId,
         pid: child.pid,
         exitCode: code,
         signal,
-      })
+      }, 'startLocalSession: process EXIT')
       console.log(`[Ttyd] Local session ${sessionId} exited with code ${code}`)
     })
 
     const ready = await waitForReady(port)
     if (!ready) {
-      debugLog('Ttyd', `startLocalSession: FAILED - ttyd not ready within timeout, killing process`)
+      log.error('startLocalSession: FAILED - ttyd not ready within timeout, killing process')
       child.kill()
       sessions.delete(sessionId)
       return { error: 'Failed to start ttyd' }
     }
 
     session.status = 'running'
-    debugLog('Ttyd', `startLocalSession: SUCCESS`, { sessionId, port, pid: child.pid })
+    log.info({ sessionId, port, pid: child.pid }, 'startLocalSession: SUCCESS')
     console.log(`[Ttyd] Local session ${sessionId} started on port ${port}`)
     return { sessionId, port }
   } catch (err) {
     sessions.delete(sessionId)
-    debugLog('Ttyd', `startLocalSession: EXCEPTION`, { sessionId, error: String(err) })
+    log.error({ sessionId, error: String(err) }, 'startLocalSession: EXCEPTION')
     return { error: `Failed to start ttyd: ${err}` }
   }
 }
