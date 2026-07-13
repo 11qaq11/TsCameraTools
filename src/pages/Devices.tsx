@@ -127,14 +127,6 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       fitAddon.fit()
       xtermRef.current = term
 
-      // Copy on select
-      term.onSelectionChange(() => {
-        const sel = term.getSelection()
-        if (sel) {
-          navigator.clipboard.writeText(sel)
-        }
-      })
-
       // IME handling - track composition state
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
@@ -329,6 +321,13 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
         
         // Ctrl+C
         if (data === '\x03') {
+          // 如果有选中文本，复制到剪贴板
+          const selection = term.getSelection()
+          if (selection) {
+            navigator.clipboard.writeText(selection)
+            return
+          }
+          // 否则中断命令
           window.electronAPI.adbShellWrite(shellId, '\x03')
           window.electronAPI.adbShellFlushStdin(shellId)
           term.write('^C\r\n' + promptPrefix)
