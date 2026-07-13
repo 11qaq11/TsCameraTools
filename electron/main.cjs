@@ -202,6 +202,11 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
   const proc = shells.get(id)
   if (proc && proc.stdin && !proc.stdin.destroyed) {
     try {
+      // 检查是否包含中文字符
+      const hasChinese = /[\u4e00-\u9fff]/.test(data)
+      if (hasChinese) {
+        console.log(`[ADB Shell] Writing Chinese text to ${id}:`, data.length, 'chars')
+      }
       proc.stdin.write(data.replace(/\r/g, '\n'))
     } catch (err) {
       console.error(`[ADB Shell] Write error for ${id}:`, err.message)

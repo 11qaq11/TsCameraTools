@@ -305,6 +305,12 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
         if (composing.current) return
 
         try {
+          // 检查是否包含中文字符
+          const hasChinese = /[\u4e00-\u9fff]/.test(data)
+          if (hasChinese) {
+            logger.info('Devices', `Chinese input detected: ${data.length} chars`)
+          }
+
           // Search mode handling
           if (searchMode.current) {
             if (data === '\r') {  // Enter - execute matched command
@@ -416,6 +422,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           // Enter
           if (data === '\r') {
             const cmd = inputBuffer.current.trim()
+            logger.info('Devices', `Enter pressed, command: "${cmd}" (${cmd.length} chars)`)
             // Add to history (skip empty and consecutive duplicates)
             if (cmd && (commandHistory.current.length === 0 || commandHistory.current[commandHistory.current.length - 1] !== cmd)) {
               commandHistory.current.push(cmd)
