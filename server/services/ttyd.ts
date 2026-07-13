@@ -320,7 +320,6 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
     '-i', '127.0.0.1',
     '--writable',
     '-t', 'fontSize=14',
-    '-t', 'fontFamily=Cascadia Code, DengXian, monospace',
     '-t', `theme=${themeJson}`,
     '-t', 'disableResizeOverlay=true',
     'cmd.exe',
