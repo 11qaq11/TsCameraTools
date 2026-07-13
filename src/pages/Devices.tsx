@@ -303,174 +303,159 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       term.onData((data) => {
         if (!sessionActive.current) return
         if (composing.current) return
-        
-        // Search mode handling
-        if (searchMode.current) {
-          if (data === '\r') {  // Enter - execute matched command
-            exitSearchMode(true)
-            return
-          }
-          if (data === '\x1b') {  // Esc - cancel search
-            exitSearchMode(false)
-            return
-          }
-          if (data === '\x7f' || data === '\b') {  // Backspace
-            if (searchQuery.current.length > 0) {
-              searchQuery.current = searchQuery.current.slice(0, -1)
+
+        try {
+          // Search mode handling
+          if (searchMode.current) {
+            if (data === '\r') {  // Enter - execute matched command
+              exitSearchMode(true)
+              return
+            }
+            if (data === '\x1b') {  // Esc - cancel search
+              exitSearchMode(false)
+              return
+            }
+            if (data === '\x7f' || data === '\b') {  // Backspace
+              if (searchQuery.current.length > 0) {
+                searchQuery.current = searchQuery.current.slice(0, -1)
+                searchResult.current = findInHistory(searchQuery.current)
+                updateSearchDisplay()
+              }
+              return
+            }
+            if (data >= ' ') {
+              searchQuery.current += data
               searchResult.current = findInHistory(searchQuery.current)
               updateSearchDisplay()
+              return
             }
             return
           }
-          if (data >= ' ') {
-            searchQuery.current += data
-            searchResult.current = findInHistory(searchQuery.current)
-            updateSearchDisplay()
+
+          // Ctrl+R - enter search mode
+          if (data === '\x12') {
+            enterSearchMode()
             return
           }
-          return
-        }
-        
-        // Ctrl+R - enter search mode
-        if (data === '\x12') {
-          enterSearchMode()
-          return
-        }
-        
-        // Ctrl+C - interrupt command
-        if (data === '\x03') {
-          window.electronAPI.adbShellWrite(shellId, '\x03')
-          window.electronAPI.adbShellFlushStdin(shellId)
-          term.write('^C\r\n' + promptPrefix)
-          inputBuffer.current = ''
-          cursorPos.current = 0
-          if (promptTimer) clearTimeout(promptTimer)
-          return
-        }
-        // Ctrl+A - home
-        if (data === '\x01') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
-        // Ctrl+E - end
-        if (data === '\x05') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
-        // Ctrl+U - delete to start
-        if (data === '\x15') { clearInput(); return }
-        // Ctrl+K - delete to end
-        if (data === '\x0b') {
-          const del = inputBuffer.current.length - cursorPos.current
-          for (let i = 0; i < del; i++) term.write(' ')
-          term.write('\x1b[' + del + 'D')
-          inputBuffer.current = inputBuffer.current.slice(0, cursorPos.current)
-          return
-        }
-        // Ctrl+W - delete word back
-        if (data === '\x17') { deleteWordBack(); return }
-        // Ctrl+L - clear screen
-        if (data === '\x0c') { term.write('\x1b[2J\x1b[H\x1b[32m$\x1b[0m ' + inputBuffer.current); cursorPos.current = inputBuffer.current.length; return }
-        // Ctrl+Left - jump word left
-        if (data === '\x1b[1;5D') { jumpWordLeft(); return }
-        // Ctrl+Right - jump word right
-        if (data === '\x1b[1;5C') { jumpWordRight(); return }
-        // Left arrow
-        if (data === '\x1b[D') { if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }; return }
-        // Right arrow
-        if (data === '\x1b[C') { if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }; return }
-        // Up arrow - history navigation
-        if (data === '\x1b[A') {
-          if (commandHistory.current.length === 0) return
-          if (historyIndex.current === -1) {
-            currentInput.current = inputBuffer.current
-            historyIndex.current = commandHistory.current.length - 1
-          } else if (historyIndex.current > 0) {
-            historyIndex.current--
+
+          // Ctrl+C - interrupt command
+          if (data === '\x03') {
+            window.electronAPI.adbShellWrite(shellId, '\x03')
+            window.electronAPI.adbShellFlushStdin(shellId)
+            term.write('^C\r\n' + promptPrefix)
+            inputBuffer.current = ''
+            cursorPos.current = 0
+            if (promptTimer) clearTimeout(promptTimer)
+            return
           }
-          clearInput()
-          const cmd = commandHistory.current[historyIndex.current]
-          inputBuffer.current = cmd
-          cursorPos.current = cmd.length
-          term.write(cmd)
-          return
-        }
-        // Down arrow - history navigation
-        if (data === '\x1b[B') {
-          if (historyIndex.current === -1) return
-          if (historyIndex.current < commandHistory.current.length - 1) {
-            historyIndex.current++
+          // Ctrl+A - home
+          if (data === '\x01') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
+          // Ctrl+E - end
+          if (data === '\x05') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
+          // Ctrl+U - delete to start
+          if (data === '\x15') { clearInput(); return }
+          // Ctrl+K - delete to end
+          if (data === '\x0b') {
+            const del = inputBuffer.current.length - cursorPos.current
+            for (let i = 0; i < del; i++) term.write(' ')
+            term.write('\x1b[' + del + 'D')
+            inputBuffer.current = inputBuffer.current.slice(0, cursorPos.current)
+            return
+          }
+          // Ctrl+W - delete word back
+          if (data === '\x17') { deleteWordBack(); return }
+          // Ctrl+L - clear screen
+          if (data === '\x0c') { term.write('\x1b[2J\x1b[H\x1b[32m$\x1b[0m ' + inputBuffer.current); cursorPos.current = inputBuffer.current.length; return }
+          // Ctrl+Left - jump word left
+          if (data === '\x1b[1;5D') { jumpWordLeft(); return }
+          // Ctrl+Right - jump word right
+          if (data === '\x1b[1;5C') { jumpWordRight(); return }
+          // Left arrow
+          if (data === '\x1b[D') { if (cursorPos.current > 0) { cursorPos.current--; term.write('\x1b[D') }; return }
+          // Right arrow
+          if (data === '\x1b[C') { if (cursorPos.current < inputBuffer.current.length) { cursorPos.current++; term.write('\x1b[C') }; return }
+          // Up arrow - history navigation
+          if (data === '\x1b[A') {
+            if (commandHistory.current.length === 0) return
+            if (historyIndex.current === -1) {
+              currentInput.current = inputBuffer.current
+              historyIndex.current = commandHistory.current.length - 1
+            } else if (historyIndex.current > 0) {
+              historyIndex.current--
+            }
             clearInput()
             const cmd = commandHistory.current[historyIndex.current]
             inputBuffer.current = cmd
             cursorPos.current = cmd.length
             term.write(cmd)
-          } else {
-            historyIndex.current = -1
-            clearInput()
-            inputBuffer.current = currentInput.current
-            cursorPos.current = currentInput.current.length
-            term.write(currentInput.current)
+            return
           }
-          return
-        }
-        // Home
-        if (data === '\x1b[H') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
-        // End
-        if (data === '\x1b[F') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
-        // Enter
-        if (data === '\r') {
-          const cmd = inputBuffer.current.trim()
-          // Add to history (skip empty and consecutive duplicates)
-          if (cmd && (commandHistory.current.length === 0 || commandHistory.current[commandHistory.current.length - 1] !== cmd)) {
-            commandHistory.current.push(cmd)
-            if (commandHistory.current.length > 300) {
-              commandHistory.current.shift()
-            }
-            saveHistory()
-          }
-          historyIndex.current = -1
-          currentInput.current = ''
-          term.write('\r\n')
-          window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
-          inputBuffer.current = ''
-          cursorPos.current = 0
-          if (promptTimer) clearTimeout(promptTimer)
-          promptTimer = setTimeout(writePrompt, 50)
-          return
-        }
-        // Backspace
-        if (data === '\x7f' || data === '\b') {
-          if (cursorPos.current === 0) return
-          const before = inputBuffer.current.slice(0, cursorPos.current - 1)
-          const after = inputBuffer.current.slice(cursorPos.current)
-          inputBuffer.current = before + after
-          cursorPos.current--
-          term.write('\b' + after + ' ')
-          term.write('\x1b[' + after.length + 'D')
-          return
-        }
-        // Printable (including Chinese characters)
-        if (data.length >= 1 && data !== '\x1b') {
-          const before = inputBuffer.current.slice(0, cursorPos.current)
-          const after = inputBuffer.current.slice(cursorPos.current)
-          inputBuffer.current = before + data + after
-          // 计算字符在终端中的宽度（中文字符占2个位置）
-          let charWidth = 0
-          for (const char of data) {
-            const code = char.codePointAt(0) || 0
-            // CJK统一汉字、CJK扩展A、兼容汉字等
-            if ((code >= 0x4E00 && code <= 0x9FFF) ||
-                (code >= 0x3400 && code <= 0x4DBF) ||
-                (code >= 0xF900 && code <= 0xFAFF) ||
-                (code >= 0x20000 && code <= 0x2A6DF) ||
-                (code >= 0x2A700 && code <= 0x2B73F) ||
-                (code >= 0x2B740 && code <= 0x2B81F) ||
-                (code >= 0x2B820 && code <= 0x2CEAF) ||
-                (code >= 0x2CEB0 && code <= 0x2EBEF) ||
-                (code >= 0x30000 && code <= 0x3134F)) {
-              charWidth += 2
+          // Down arrow - history navigation
+          if (data === '\x1b[B') {
+            if (historyIndex.current === -1) return
+            if (historyIndex.current < commandHistory.current.length - 1) {
+              historyIndex.current++
+              clearInput()
+              const cmd = commandHistory.current[historyIndex.current]
+              inputBuffer.current = cmd
+              cursorPos.current = cmd.length
+              term.write(cmd)
             } else {
-              charWidth += 1
+              historyIndex.current = -1
+              clearInput()
+              inputBuffer.current = currentInput.current
+              cursorPos.current = currentInput.current.length
+              term.write(currentInput.current)
             }
+            return
           }
-          cursorPos.current += data.length
-          term.write(data + after)
-          if (after.length) term.write('\x1b[' + after.length + 'D')
+          // Home
+          if (data === '\x1b[H') { term.write('\x1b[' + cursorPos.current + 'D'); cursorPos.current = 0; return }
+          // End
+          if (data === '\x1b[F') { const m = inputBuffer.current.length - cursorPos.current; if (m > 0) term.write('\x1b[' + m + 'C'); cursorPos.current = inputBuffer.current.length; return }
+          // Enter
+          if (data === '\r') {
+            const cmd = inputBuffer.current.trim()
+            // Add to history (skip empty and consecutive duplicates)
+            if (cmd && (commandHistory.current.length === 0 || commandHistory.current[commandHistory.current.length - 1] !== cmd)) {
+              commandHistory.current.push(cmd)
+              if (commandHistory.current.length > 300) {
+                commandHistory.current.shift()
+              }
+              saveHistory()
+            }
+            historyIndex.current = -1
+            currentInput.current = ''
+            term.write('\r\n')
+            window.electronAPI.adbShellWrite(shellId, inputBuffer.current + '\n')
+            inputBuffer.current = ''
+            cursorPos.current = 0
+            if (promptTimer) clearTimeout(promptTimer)
+            promptTimer = setTimeout(writePrompt, 50)
+            return
+          }
+          // Backspace
+          if (data === '\x7f' || data === '\b') {
+            if (cursorPos.current === 0) return
+            const before = inputBuffer.current.slice(0, cursorPos.current - 1)
+            const after = inputBuffer.current.slice(cursorPos.current)
+            inputBuffer.current = before + after
+            cursorPos.current--
+            term.write('\b' + after + ' ')
+            term.write('\x1b[' + after.length + 'D')
+            return
+          }
+          // Printable (including Chinese characters)
+          if (data.length >= 1 && data !== '\x1b') {
+            const before = inputBuffer.current.slice(0, cursorPos.current)
+            const after = inputBuffer.current.slice(cursorPos.current)
+            inputBuffer.current = before + data + after
+            cursorPos.current += data.length
+            term.write(data + after)
+            if (after.length) term.write('\x1b[' + after.length + 'D')
+          }
+        } catch (err) {
+          console.error('[Devices] Error in onData:', err)
         }
       })
 
