@@ -173,7 +173,10 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
   try {
     const child = spawn(binary.path, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, LANG: 'en_US.UTF-8' },
+      env: { 
+        ...process.env, 
+        LANG: 'zh_CN.UTF-8',
+      },
     })
 
     const session: TtydSession = {
@@ -320,6 +323,7 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
     '-i', '127.0.0.1',
     '--writable',
     '-t', 'fontSize=14',
+    '-t', 'fontFamily=Cascadia Code, DengXian, monospace',
     '-t', `theme=${themeJson}`,
     '-t', 'disableResizeOverlay=true',
     'cmd.exe',
