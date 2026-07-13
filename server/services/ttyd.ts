@@ -173,10 +173,7 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
   try {
     const child = spawn(binary.path, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { 
-        ...process.env, 
-        LANG: 'zh_CN.UTF-8',
-      },
+      env: { ...process.env, LANG: 'en_US.UTF-8' },
     })
 
     const session: TtydSession = {
