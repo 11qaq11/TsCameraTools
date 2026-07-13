@@ -179,7 +179,14 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
       mainWindow.webContents.send('adb:shell:data', id, data)
     }
   })
-  proc.on('close', () => {
+  proc.on('error', (err) => {
+    console.error(`[ADB Shell] Process error for ${id}:`, err.message)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
+    }
+  })
+  proc.on('close', (code) => {
+    console.log(`[ADB Shell] Process closed for ${id} with code ${code}`)
     shells.delete(id)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:exit', id)
@@ -194,7 +201,11 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
 ipcMain.on('adb:shell:write', (_event, id, data) => {
   const proc = shells.get(id)
   if (proc && proc.stdin && !proc.stdin.destroyed) {
-    proc.stdin.write(data.replace(/\r/g, '\n'))
+    try {
+      proc.stdin.write(data.replace(/\r/g, '\n'))
+    } catch (err) {
+      console.error(`[ADB Shell] Write error for ${id}:`, err.message)
+    }
   }
 })
 
