@@ -319,15 +319,8 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           return
         }
         
-        // Ctrl+C
+        // Ctrl+C - interrupt command
         if (data === '\x03') {
-          // 如果有选中文本，复制到剪贴板
-          const selection = term.getSelection()
-          if (selection) {
-            navigator.clipboard.writeText(selection)
-            return
-          }
-          // 否则中断命令
           window.electronAPI.adbShellWrite(shellId, '\x03')
           window.electronAPI.adbShellFlushStdin(shellId)
           term.write('^C\r\n' + promptPrefix)
@@ -336,8 +329,16 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           if (promptTimer) clearTimeout(promptTimer)
           return
         }
-        // Ctrl+V
-        if (data === '\x16') {
+        // Ctrl+Insert - copy selected text
+        if (data === '\x1b[2;5~') {
+          const selection = term.getSelection()
+          if (selection) {
+            navigator.clipboard.writeText(selection)
+          }
+          return
+        }
+        // Shift+Insert - paste
+        if (data === '\x1b[2;2~') {
           navigator.clipboard.readText().then((t) => {
             if (t) { inputBuffer.current += t; cursorPos.current += t.length; term.write(t) }
           })
