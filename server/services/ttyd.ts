@@ -338,7 +338,11 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
     const child = spawn(binary.path, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: homeDir,
-      env: { ...process.env, LANG: 'en_US.UTF-8' },
+      env: {
+        ...process.env,
+        LANG: 'en_US.UTF-8',
+        PROMPT: '$P$G ',
+      },
     })
 
     const session: TtydSession = {
