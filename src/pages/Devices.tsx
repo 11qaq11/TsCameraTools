@@ -157,17 +157,9 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', (e: CompositionEvent) => {
-          composing.current = false
-          // compositionend 时直接处理输入，避免 onData 重复触发
-          if (e.data) {
-            const before = inputBuffer.current.slice(0, cursorPos.current)
-            const after = inputBuffer.current.slice(cursorPos.current)
-            inputBuffer.current = before + e.data + after
-            cursorPos.current += e.data.length
-            term.write(e.data + after)
-            if (after.length) term.write('\x1b[' + after.length + 'D')
-          }
+        textarea.addEventListener('compositionend', () => {
+          // 延迟重置composing标志，等待xterm.js处理完IME输入
+          setTimeout(() => { composing.current = false }, 50)
         })
       }
 
@@ -452,12 +444,31 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           term.write('\x1b[' + after.length + 'D')
           return
         }
-        // Printable
-        if (data >= ' ') {
+        // Printable (including Chinese characters)
+        if (data.length >= 1 && data !== '\x1b') {
           const before = inputBuffer.current.slice(0, cursorPos.current)
           const after = inputBuffer.current.slice(cursorPos.current)
           inputBuffer.current = before + data + after
-          cursorPos.current++
+          // 计算字符在终端中的宽度（中文字符占2个位置）
+          let charWidth = 0
+          for (const char of data) {
+            const code = char.codePointAt(0) || 0
+            // CJK统一汉字、CJK扩展A、兼容汉字等
+            if ((code >= 0x4E00 && code <= 0x9FFF) ||
+                (code >= 0x3400 && code <= 0x4DBF) ||
+                (code >= 0xF900 && code <= 0xFAFF) ||
+                (code >= 0x20000 && code <= 0x2A6DF) ||
+                (code >= 0x2A700 && code <= 0x2B73F) ||
+                (code >= 0x2B740 && code <= 0x2B81F) ||
+                (code >= 0x2B820 && code <= 0x2CEAF) ||
+                (code >= 0x2CEB0 && code <= 0x2EBEF) ||
+                (code >= 0x30000 && code <= 0x3134F)) {
+              charWidth += 2
+            } else {
+              charWidth += 1
+            }
+          }
+          cursorPos.current += data.length
           term.write(data + after)
           if (after.length) term.write('\x1b[' + after.length + 'D')
         }
