@@ -460,6 +460,8 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
             cursorPos.current += data.length
             term.write(data + after)
             if (after.length) term.write('\x1b[' + after.length + 'D')
+            // 发送字符到 ADB shell
+            window.electronAPI.adbShellWrite(shellId, data)
           }
         } catch (err) {
           console.error('[Devices] Error in onData:', err)
