@@ -171,10 +171,19 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
   }, 'startSession: spawning ttyd')
 
   try {
+    const startTime = Date.now()
     const child = spawn(binary.path, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, LANG: 'en_US.UTF-8' },
     })
+
+    log.info({
+      sessionId,
+      serial,
+      port,
+      pid: child.pid,
+      args: args.join(' '),
+    }, '[TTYD-DEBUG] Spawning ADB shell session')
 
     const session: TtydSession = {
       id: sessionId,
@@ -190,11 +199,13 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
     log.debug(`startSession: process spawned, pid=${child.pid}`)
 
     child.stdout?.on('data', (data) => {
-      log.debug(`[stdout] ${data.toString().trim()}`)
+      log.debug(`[TTYD-DEBUG stdout] ${data.toString().trim().substring(0, 200)}`)
     })
 
     child.stderr?.on('data', (data) => {
-      log.debug(`[stderr] ${data.toString().trim()}`)
+      const text = data.toString().trim()
+      log.error({ data: text.substring(0, 500) }, '[TTYD-DEBUG stderr]')
+      console.error(`[TTYD-DEBUG stderr] ${text.substring(0, 200)}`)
     })
 
     child.on('error', (err) => {
@@ -210,15 +221,18 @@ export async function startSession(serial: string): Promise<{ sessionId: string;
     })
 
     child.on('exit', (code, signal) => {
+      const uptime = Date.now() - startTime
       session.status = 'stopped'
       sessions.delete(sessionId)
-      log.debug({
+      log.error({
         sessionId,
+        serial,
         pid: child.pid,
         exitCode: code,
         signal,
-      }, 'startSession: process EXIT')
-      console.log(`[Ttyd] Session ${sessionId} exited with code ${code}`)
+        uptimeMs: uptime,
+      }, '[TTYD-DEBUG] ADB shell session EXITED')
+      console.error(`[TTYD-DEBUG] Session ${sessionId} EXITED: code=${code} signal=${signal} uptime=${uptime}ms`)
     })
 
     const ready = await waitForReady(port)
@@ -359,11 +373,13 @@ export async function startLocalSession(): Promise<{ sessionId: string; port: nu
     log.debug(`startLocalSession: process spawned, pid=${child.pid}`)
 
     child.stdout?.on('data', (data) => {
-      log.debug(`[stdout] ${data.toString().trim()}`)
+      log.debug(`[TTYD-DEBUG stdout] ${data.toString().trim().substring(0, 200)}`)
     })
 
     child.stderr?.on('data', (data) => {
-      log.debug(`[stderr] ${data.toString().trim()}`)
+      const text = data.toString().trim()
+      log.error({ data: text.substring(0, 500) }, '[TTYD-DEBUG stderr]')
+      console.error(`[TTYD-DEBUG stderr] ${text.substring(0, 200)}`)
     })
 
     child.on('error', (err) => {

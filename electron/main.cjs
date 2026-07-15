@@ -155,6 +155,9 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
   const adb = getAdbPath()
   if (!adb) return null
   const id = `${serial}-${Date.now()}`
+  const startTime = Date.now()
+
+  console.log(`[IME-DEBUG] Starting ADB shell:`, { id, serial, adb })
 
   const proc = spawn(adb, ['-s', serial, 'shell'], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -165,8 +168,6 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
 
   proc.stdout.setEncoding('utf-8')
   proc.stderr.setEncoding('utf-8')
-
-  // 设置 stdin 编码为 utf-8
   proc.stdin.setDefaultEncoding('utf-8')
 
   proc.stdout.on('data', (data) => {
@@ -175,18 +176,26 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
     }
   })
   proc.stderr.on('data', (data) => {
+    console.error(`[IME-DEBUG] ADB shell stderr:`, { id, data: data.toString().substring(0, 200) })
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:data', id, data)
     }
   })
   proc.on('error', (err) => {
-    console.error(`[ADB Shell] Process error for ${id}:`, err.message)
+    console.error(`[IME-DEBUG] ADB shell process ERROR:`, { id, error: err.message })
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
     }
   })
-  proc.on('close', (code) => {
-    console.log(`[ADB Shell] Process closed for ${id} with code ${code}`)
+  proc.on('close', (code, signal) => {
+    const uptime = Date.now() - startTime
+    console.error(`[IME-DEBUG] ADB shell process CLOSED:`, {
+      id,
+      exitCode: code,
+      signal,
+      pid: proc.pid,
+      uptimeMs: uptime,
+    })
     shells.delete(id)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:exit', id)
@@ -202,15 +211,33 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
   const proc = shells.get(id)
   if (proc && proc.stdin && !proc.stdin.destroyed) {
     try {
-      // 检查是否包含中文字符
       const hasChinese = /[\u4e00-\u9fff]/.test(data)
       if (hasChinese) {
-        console.log(`[ADB Shell] Writing Chinese text to ${id}:`, data.length, 'chars')
+        const hex = Buffer.from(data, 'utf-8').toString('hex')
+        console.log(`[IME-DEBUG] adb:shell:write Chinese:`, {
+          id,
+          data: data.substring(0, 30),
+          hex,
+          length: data.length,
+          stdinWritable: proc.stdin.writable,
+          stdinDestroyed: proc.stdin.destroyed,
+          pid: proc.pid,
+        })
       }
       proc.stdin.write(data.replace(/\r/g, '\n'))
+      if (hasChinese) {
+        console.log(`[IME-DEBUG] adb:shell:write Chinese SUCCESS`)
+      }
     } catch (err) {
-      console.error(`[ADB Shell] Write error for ${id}:`, err.message)
+      console.error(`[IME-DEBUG] adb:shell:write ERROR:`, { id, error: err.message })
     }
+  } else {
+    console.error(`[IME-DEBUG] adb:shell:write SKIPPED (proc not ready):`, {
+      id,
+      hasProc: !!proc,
+      hasStdin: !!(proc && proc.stdin),
+      destroyed: proc && proc.stdin ? proc.stdin.destroyed : 'N/A',
+    })
   }
 })
 

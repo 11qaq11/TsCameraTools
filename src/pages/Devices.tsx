@@ -156,10 +156,19 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
       // IME handling - track composition state
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
-        textarea.addEventListener('compositionstart', () => { composing.current = true })
-        textarea.addEventListener('compositionend', () => {
-          // rAF 在浏览器处理完所有待处理的输入事件后触发，比 setTimeout 更可靠
-          requestAnimationFrame(() => { composing.current = false })
+        textarea.addEventListener('compositionstart', () => {
+          console.log('[IME-DEBUG] compositionstart')
+          composing.current = true
+        })
+        textarea.addEventListener('compositionend', (e) => {
+          console.log('[IME-DEBUG] compositionend:', {
+            data: e.data,
+            composingBefore: composing.current,
+          })
+          requestAnimationFrame(() => {
+            console.log('[IME-DEBUG] rAF: resetting composing to false')
+            composing.current = false
+          })
         })
       }
 
@@ -302,12 +311,23 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
 
       term.onData((data) => {
         if (!sessionActive.current) return
+
+        // DEBUG: 记录所有输入事件
+        const hasChinese = /[\u4e00-\u9fff]/.test(data)
+        if (hasChinese || composing.current) {
+          console.log('[IME-DEBUG] onData:', {
+            data: data.substring(0, 30),
+            hex: Array.from(data).map(c => c.charCodeAt(0).toString(16)).join(' '),
+            composing: composing.current,
+            length: data.length,
+          })
+        }
+
         if (composing.current) return
 
         try {
-          // 检查是否包含中文字符
-          const hasChinese = /[\u4e00-\u9fff]/.test(data)
           if (hasChinese) {
+            console.log('[IME-DEBUG] Processing Chinese input:', data)
             logger.info('Devices', `Chinese input detected: ${data.length} chars`)
           }
 
@@ -478,6 +498,7 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
       }
       const handleExit = (id: string) => {
         if (id === shellId) {
+          console.error('[IME-DEBUG] Shell EXIT received:', { id, shellId, sessionActive: sessionActive.current })
           sessionActive.current = false
           if (promptTimer) clearTimeout(promptTimer)
           term.write('\r\n\x1b[31mDevice Disconnected\x1b[0m\r\n')
