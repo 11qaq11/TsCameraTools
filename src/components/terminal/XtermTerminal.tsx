@@ -73,8 +73,10 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
 
       xtermRef.current = term
 
-      // WebSocket connection
-      const wsUrl = `ws://${window.location.hostname}:${window.location.port || '3000'}/terminal?type=${type}${serial ? `&serial=${serial}` : ''}`
+      // WebSocket connection - connect to backend (not Vite dev server)
+      const wsHost = import.meta.env.VITE_API_HOST || window.location.hostname
+      const wsPort = import.meta.env.VITE_API_PORT || '3000'
+      const wsUrl = `ws://${wsHost}:${wsPort}/terminal?type=${type}${serial ? `&serial=${serial}` : ''}`
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
 

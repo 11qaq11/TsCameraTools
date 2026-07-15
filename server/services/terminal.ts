@@ -24,9 +24,8 @@ export function setupTerminalWss(server: Server) {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request)
       })
-    } else {
-      socket.destroy()
     }
+    // Don't destroy socket here - let Socket.io handle its own upgrades
   })
 
   wss.on('connection', (ws, request) => {
