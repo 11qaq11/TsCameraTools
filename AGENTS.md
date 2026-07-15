@@ -51,22 +51,24 @@ src/types/index.ts     → ElectronAPI 类型定义
 ### 后端（server/）
 - 入口：`server/index.ts`
 - 配置：`server/config.ts`（读取 .env）
-- 路由：`server/routes/{auth,adb,logs}.ts`
-- 服务：`server/services/ttyd.ts`（ttyd 进程管理）
+- 路由：`server/routes/{auth,adb,logs,ttyd,debug}.ts`
+- 终端服务：`server/services/terminal.ts`（node-pty + WebSocket）
+- 日志：pino → `logs/server.log`
 
 ### 前端关键目录
 ```
 src/store/             → Redux Toolkit（ui.ts, sessions.ts）
-src/components/terminal/ → Hyper 风格终端（xterm.js）
+src/components/terminal/ → XtermTerminal.tsx（xterm.js + WebSocket）
 src/hooks/             → useAuth, useSearch
-src/pages/             → Devices, DevicesWeb, Login, AuthCallback
+src/pages/             → Devices, DevicesWeb, Login, AuthCallback, LocalTerminal
 ```
 
-### Shell 终端
-- 后端：`child_process.spawn`（pipe 模式）
-- 前端：xterm.js + 本地回显
-- 通信：Electron IPC（Electron 模式）/ ttyd iframe（Web 模式）
-- 支持 IME 中文输入
+### Shell 终端（统一架构 2026-07-15）
+- 后端：`server/services/terminal.ts` — node-pty + WebSocket（`/terminal` 路径）
+- 前端：`src/components/terminal/XtermTerminal.tsx` — xterm.js + FitAddon + WebSocket
+- 协议：JSON `{type:'input'|'output'|'resize'|'kill'|'ready'|'exit'}`
+- 通信：WebSocket（Web 模式）/ Electron IPC（Electron 模式 Devices.tsx 仍用旧方式）
+- 本地终端：powershell.exe（Windows）/ bash（Linux）
 
 ---
 
