@@ -4,21 +4,38 @@ import '@xterm/xterm/css/xterm.css'
 import type { AdbDevice } from '../types'
 import { logger } from '../utils/logger'
 
+// Debug log → 写入本地文件 (logs/renderer.log via IPC)
+const debugLog = (msg: string, data?: Record<string, unknown>) => {
+  const entry = data ? `${msg} ${JSON.stringify(data)}` : msg
+  window.electronAPI?.writeLog?.(`[IME-DEBUG] ${entry}`)
+  console.log(`[IME-DEBUG] ${entry}`)
+}
+
 function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (serial: string) => void }) {
   const [status, setStatus] = useState('')
 
   const handleRoot = async () => {
-    setStatus('rooting...')
-    const res = await window.electronAPI.adbRoot(device.serial)
-    setStatus(res.message)
-    setTimeout(() => setStatus(''), 3000)
+    try {
+      setStatus('rooting...')
+      const res = await window.electronAPI.adbRoot(device.serial)
+      setStatus(res.message)
+      setTimeout(() => setStatus(''), 3000)
+    } catch (err) {
+      logger.error('DeviceCard', 'adbRoot failed', err)
+      setStatus('root failed')
+    }
   }
 
   const handleRemount = async () => {
-    setStatus('remounting...')
-    const res = await window.electronAPI.adbRemount(device.serial)
-    setStatus(res.message)
-    setTimeout(() => setStatus(''), 3000)
+    try {
+      setStatus('remounting...')
+      const res = await window.electronAPI.adbRemount(device.serial)
+      setStatus(res.message)
+      setTimeout(() => setStatus(''), 3000)
+    } catch (err) {
+      logger.error('DeviceCard', 'adbRemount failed', err)
+      setStatus('remount failed')
+    }
   }
 
   return (
@@ -157,16 +174,13 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
       const textarea = term.element?.querySelector('textarea')
       if (textarea) {
         textarea.addEventListener('compositionstart', () => {
-          console.log('[IME-DEBUG] compositionstart')
+          debugLog('compositionstart')
           composing.current = true
         })
         textarea.addEventListener('compositionend', (e) => {
-          console.log('[IME-DEBUG] compositionend:', {
-            data: e.data,
-            composingBefore: composing.current,
-          })
+          debugLog('compositionend', { data: e.data, composingBefore: composing.current })
           requestAnimationFrame(() => {
-            console.log('[IME-DEBUG] rAF: resetting composing to false')
+            debugLog('rAF: resetting composing to false')
             composing.current = false
           })
         })
@@ -315,7 +329,7 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
         // DEBUG: 记录所有输入事件
         const hasChinese = /[\u4e00-\u9fff]/.test(data)
         if (hasChinese || composing.current) {
-          console.log('[IME-DEBUG] onData:', {
+          debugLog('onData', {
             data: data.substring(0, 30),
             hex: Array.from(data).map(c => c.charCodeAt(0).toString(16)).join(' '),
             composing: composing.current,
@@ -327,7 +341,7 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
 
         try {
           if (hasChinese) {
-            console.log('[IME-DEBUG] Processing Chinese input:', data)
+            debugLog('Processing Chinese input', { data, length: data.length })
             logger.info('Devices', `Chinese input detected: ${data.length} chars`)
           }
 
@@ -484,7 +498,7 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
             window.electronAPI.adbShellWrite(shellId, data)
           }
         } catch (err) {
-          console.error('[Devices] Error in onData:', err)
+          logger.error('Devices', 'Error in onData', err)
         }
       })
 
@@ -498,7 +512,7 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
       }
       const handleExit = (id: string) => {
         if (id === shellId) {
-          console.error('[IME-DEBUG] Shell EXIT received:', { id, shellId, sessionActive: sessionActive.current })
+          debugLog('Shell EXIT received', { id, shellId, sessionActive: sessionActive.current })
           sessionActive.current = false
           if (promptTimer) clearTimeout(promptTimer)
           term.write('\r\n\x1b[31mDevice Disconnected\x1b[0m\r\n')
@@ -520,7 +534,9 @@ function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId:
     }
 
     let cleanup: (() => void) | undefined
-    init().then((fn) => { cleanup = fn })
+    init().then((fn) => { cleanup = fn }).catch((err) => {
+      logger.error('Devices', 'Terminal init failed', err)
+    })
 
     return () => { cleanup?.() }
   }, [shellId, serial, model])
@@ -605,25 +621,38 @@ function Devices() {
   }, [])
 
   const handleInstall = async () => {
-    setInstalling(true)
-    const res = await window.electronAPI.adbInstall()
-    setInstalling(false)
-    if (res.success) {
-      setAdbAvailable(true)
-      checkAndRefresh()
+    try {
+      setInstalling(true)
+      const res = await window.electronAPI.adbInstall()
+      setInstalling(false)
+      if (res.success) {
+        setAdbAvailable(true)
+        checkAndRefresh()
+      }
+    } catch (err) {
+      logger.error('Devices', 'ADB install failed', err)
+      setInstalling(false)
     }
   }
 
   const handleConnect = async (serial: string) => {
-    const id = await window.electronAPI.adbShellStart(serial)
-    const device = devices.find((d) => d.serial === serial)
-    if (id) setShell({ id, serial, model: device?.model || serial })
+    try {
+      const id = await window.electronAPI.adbShellStart(serial)
+      const device = devices.find((d) => d.serial === serial)
+      if (id) setShell({ id, serial, model: device?.model || serial })
+    } catch (err) {
+      logger.error('Devices', 'Shell start failed', err)
+    }
   }
 
   const handleReconnect = async () => {
     if (!shell) return
-    const newId = await window.electronAPI.adbShellReconnect(shell.serial, shell.id)
-    if (newId) setShell({ ...shell, id: newId })
+    try {
+      const newId = await window.electronAPI.adbShellReconnect(shell.serial, shell.id)
+      if (newId) setShell({ ...shell, id: newId })
+    } catch (err) {
+      logger.error('Devices', 'Shell reconnect failed', err)
+    }
   }
 
   if (adbAvailable === null) {

@@ -22,45 +22,55 @@ router.post('/start', async (req, res) => {
     return res.status(400).json({ success: false, error: 'serial is required' })
   }
 
-  const startTime = Date.now()
-  const result = await startSession(serial)
-  const elapsed = Date.now() - startTime
+  try {
+    const startTime = Date.now()
+    const result = await startSession(serial)
+    const elapsed = Date.now() - startTime
 
-  if ('error' in result) {
-    log.debug({ error: result.error, elapsed }, 'POST /api/ttyd/start: FAILED')
-    return res.status(500).json({ success: false, error: result.error })
-  }
+    if ('error' in result) {
+      log.debug({ error: result.error, elapsed }, 'POST /api/ttyd/start: FAILED')
+      return res.status(500).json({ success: false, error: result.error })
+    }
 
-  const response = {
-    success: true,
-    sessionId: result.sessionId,
-    port: result.port,
-    url: `http://localhost:${result.port}`,
+    const response = {
+      success: true,
+      sessionId: result.sessionId,
+      port: result.port,
+      url: `http://localhost:${result.port}`,
+    }
+    log.debug({ ...response, elapsed }, 'POST /api/ttyd/start: SUCCESS')
+    res.json(response)
+  } catch (err) {
+    log.error({ error: (err as Error).message, stack: (err as Error).stack }, 'POST /api/ttyd/start: UNHANDLED ERROR')
+    res.status(500).json({ success: false, error: 'Internal server error' })
   }
-  log.debug({ ...response, elapsed }, 'POST /api/ttyd/start: SUCCESS')
-  res.json(response)
 })
 
 router.post('/start-local', async (_req, res) => {
   log.debug('POST /api/ttyd/start-local')
 
-  const startTime = Date.now()
-  const result = await startLocalSession()
-  const elapsed = Date.now() - startTime
+  try {
+    const startTime = Date.now()
+    const result = await startLocalSession()
+    const elapsed = Date.now() - startTime
 
-  if ('error' in result) {
-    log.debug({ error: result.error, elapsed }, 'POST /api/ttyd/start-local: FAILED')
-    return res.status(500).json({ success: false, error: result.error })
-  }
+    if ('error' in result) {
+      log.debug({ error: result.error, elapsed }, 'POST /api/ttyd/start-local: FAILED')
+      return res.status(500).json({ success: false, error: result.error })
+    }
 
-  const response = {
-    success: true,
-    sessionId: result.sessionId,
-    port: result.port,
-    url: `http://localhost:${result.port}`,
+    const response = {
+      success: true,
+      sessionId: result.sessionId,
+      port: result.port,
+      url: `http://localhost:${result.port}`,
+    }
+    log.debug({ ...response, elapsed }, 'POST /api/ttyd/start-local: SUCCESS')
+    res.json(response)
+  } catch (err) {
+    log.error({ error: (err as Error).message, stack: (err as Error).stack }, 'POST /api/ttyd/start-local: UNHANDLED ERROR')
+    res.status(500).json({ success: false, error: 'Internal server error' })
   }
-  log.debug({ ...response, elapsed }, 'POST /api/ttyd/start-local: SUCCESS')
-  res.json(response)
 })
 
 router.post('/stop', (req, res) => {

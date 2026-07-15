@@ -4,6 +4,7 @@ const { spawn, execSync } = require('child_process')
 const fs = require('fs')
 const https = require('https')
 const { createWriteStream } = require('fs')
+const pino = require('pino')
 
 let mainWindow
 
@@ -16,6 +17,18 @@ if (!fs.existsSync(LOGS_DIR)) {
   fs.mkdirSync(LOGS_DIR, { recursive: true })
 }
 
+// Pino logger → logs/electron-main.log
+const log = pino({ level: 'debug' }, pino.destination(path.join(LOGS_DIR, 'electron-main.log')))
+
+// Global crash handlers
+process.on('uncaughtException', (err) => {
+  log.fatal({ error: err.message, stack: err.stack }, 'UNCAUGHT EXCEPTION')
+  process.exit(1)
+})
+process.on('unhandledRejection', (reason) => {
+  log.error({ reason: String(reason) }, 'UNHANDLED REJECTION')
+})
+
 function getLogFilePath() {
   const now = new Date()
   const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
@@ -26,7 +39,9 @@ function getAdbPath() {
   try {
     execSync('adb version', { encoding: 'utf-8', timeout: 3000 })
     return 'adb'
-  } catch {}
+  } catch (err) {
+    log.debug({ error: err.message }, 'getAdbPath: adb not in PATH')
+  }
   if (fs.existsSync(ADB_EXE)) return ADB_EXE
   return null
 }
@@ -119,7 +134,8 @@ ipcMain.handle('adb:devices', async () => {
         const model = line.match(/model:(\S+)/)?.[1] || serial
         return { serial, model }
       })
-  } catch {
+  } catch (err) {
+    log.error({ error: err.message }, 'adb:devices failed')
     return []
   }
 })
@@ -157,7 +173,7 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
   const id = `${serial}-${Date.now()}`
   const startTime = Date.now()
 
-  console.log(`[IME-DEBUG] Starting ADB shell:`, { id, serial, adb })
+  log.info(`[IME-DEBUG] Starting ADB shell:`, { id, serial, adb })
 
   const proc = spawn(adb, ['-s', serial, 'shell'], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -176,20 +192,20 @@ ipcMain.handle('adb:shell:start', async (_event, serial) => {
     }
   })
   proc.stderr.on('data', (data) => {
-    console.error(`[IME-DEBUG] ADB shell stderr:`, { id, data: data.toString().substring(0, 200) })
+    log.error(`[IME-DEBUG] ADB shell stderr:`, { id, data: data.toString().substring(0, 200) })
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:data', id, data)
     }
   })
   proc.on('error', (err) => {
-    console.error(`[IME-DEBUG] ADB shell process ERROR:`, { id, error: err.message })
+    log.error(`[IME-DEBUG] ADB shell process ERROR:`, { id, error: err.message })
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
     }
   })
   proc.on('close', (code, signal) => {
     const uptime = Date.now() - startTime
-    console.error(`[IME-DEBUG] ADB shell process CLOSED:`, {
+    log.error(`[IME-DEBUG] ADB shell process CLOSED:`, {
       id,
       exitCode: code,
       signal,
@@ -214,7 +230,7 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
       const hasChinese = /[\u4e00-\u9fff]/.test(data)
       if (hasChinese) {
         const hex = Buffer.from(data, 'utf-8').toString('hex')
-        console.log(`[IME-DEBUG] adb:shell:write Chinese:`, {
+        log.info(`[IME-DEBUG] adb:shell:write Chinese:`, {
           id,
           data: data.substring(0, 30),
           hex,
@@ -226,13 +242,13 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
       }
       proc.stdin.write(data.replace(/\r/g, '\n'))
       if (hasChinese) {
-        console.log(`[IME-DEBUG] adb:shell:write Chinese SUCCESS`)
+        log.info(`[IME-DEBUG] adb:shell:write Chinese SUCCESS`)
       }
     } catch (err) {
-      console.error(`[IME-DEBUG] adb:shell:write ERROR:`, { id, error: err.message })
+      log.error(`[IME-DEBUG] adb:shell:write ERROR:`, { id, error: err.message })
     }
   } else {
-    console.error(`[IME-DEBUG] adb:shell:write SKIPPED (proc not ready):`, {
+    log.error(`[IME-DEBUG] adb:shell:write SKIPPED (proc not ready):`, {
       id,
       hasProc: !!proc,
       hasStdin: !!(proc && proc.stdin),
@@ -243,13 +259,16 @@ ipcMain.on('adb:shell:write', (_event, id, data) => {
 
 ipcMain.on('adb:shell:kill', (_event, id) => {
   const proc = shells.get(id)
-  if (proc) { proc.kill(); shells.delete(id) }
+  if (proc) {
+    try { proc.kill() } catch (err) { log.error({ id, error: err.message }, 'shell kill failed') }
+    shells.delete(id)
+  }
 })
 
 ipcMain.on('adb:shell:flush-stdin', (_event, id) => {
   const proc = shells.get(id)
   if (proc && proc.stdin && !proc.stdin.destroyed) {
-    proc.stdin.write('\x03\n')
+    try { proc.stdin.write('\x03\n') } catch (err) { log.error({ id, error: err.message }, 'flush-stdin failed') }
   }
 })
 
@@ -286,13 +305,13 @@ ipcMain.handle('adb:shell:reconnect', async (_event, serial, oldId) => {
     }
   })
   proc.on('error', (err) => {
-    console.error(`[ADB Shell] Reconnect error for ${id}:`, err.message)
+    log.error(`[ADB Shell] Reconnect error for ${id}:`, err.message)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
     }
   })
   proc.on('close', (code) => {
-    console.log(`[ADB Shell] Process closed for ${id} with code ${code}`)
+    log.info(`[ADB Shell] Process closed for ${id} with code ${code}`)
     shells.delete(id)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('adb:shell:exit', id)
@@ -329,21 +348,25 @@ ipcMain.handle('history:save', async (_event, history) => {
   }
 })
 
-// Log: write to file
+// Log: write to file (from renderer process)
+const rendererLog = pino({ level: 'debug' }, pino.destination(path.join(LOGS_DIR, 'renderer.log')))
 ipcMain.handle('log:write', async (_event, message) => {
   try {
-    const logFile = getLogFilePath()
-    fs.appendFileSync(logFile, message + '\n')
+    rendererLog.info({ source: 'renderer' }, message)
     return { success: true }
   } catch (e) {
     return { success: false, message: e.message }
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(createWindow).catch((err) => {
+  log.fatal({ error: err.message, stack: err.stack }, 'createWindow failed')
+})
 
 app.on('window-all-closed', () => {
-  for (const proc of shells.values()) proc.kill()
+  for (const proc of shells.values()) {
+    try { proc.kill() } catch {}
+  }
   app.quit()
 })
 
