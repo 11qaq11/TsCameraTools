@@ -13,14 +13,34 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
   const termRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<InstanceType<typeof import('@xterm/xterm').Terminal> | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const resizeObsRef = useRef<ResizeObserver | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'disconnected'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
-  const reconnecting = useRef(false)
+  const connecting = useRef(false)
+  const mounted = useRef(true)
+
+  const cleanup = useCallback(() => {
+    if (resizeObsRef.current) {
+      resizeObsRef.current.disconnect()
+      resizeObsRef.current = null
+    }
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close()
+      }
+      wsRef.current = null
+    }
+    if (xtermRef.current) {
+      xtermRef.current.dispose()
+      xtermRef.current = null
+    }
+  }, [])
 
   const connect = useCallback(async () => {
-    if (reconnecting.current) return
-    reconnecting.current = true
+    if (connecting.current) return
+    connecting.current = true
 
+    cleanup()
     setStatus('loading')
     logger.info('XtermTerminal', `Connecting: type=${type}, serial=${serial || 'N/A'}`)
 
@@ -28,11 +48,7 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
       const { Terminal } = await import('@xterm/xterm')
       const { FitAddon } = await import('@xterm/addon-fit')
 
-      // Clean up old terminal
-      if (xtermRef.current) {
-        xtermRef.current.dispose()
-        xtermRef.current = null
-      }
+      if (!mounted.current) return
 
       const term = new Terminal({
         fontSize: 14,
@@ -73,9 +89,11 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
 
       xtermRef.current = term
 
-      // WebSocket connection - connect to backend (not Vite dev server)
-      const wsHost = import.meta.env.VITE_API_HOST || window.location.hostname
-      const wsPort = import.meta.env.VITE_API_PORT || '3000'
+      // WebSocket connection - in dev mode, connect to backend (port 3000)
+      // In production, connect to same host (frontend served from Express)
+      const isDev = import.meta.env.DEV
+      const wsHost = isDev ? (import.meta.env.VITE_API_HOST || 'localhost') : window.location.hostname
+      const wsPort = isDev ? (import.meta.env.VITE_API_PORT || '3000') : window.location.port || '3000'
       const wsUrl = `ws://${wsHost}:${wsPort}/terminal?type=${type}${serial ? `&serial=${serial}` : ''}`
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
@@ -83,7 +101,7 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
       ws.onopen = () => {
         logger.info('XtermTerminal', 'WebSocket connected')
         setStatus('ready')
-        reconnecting.current = false
+        connecting.current = false
 
         // Send initial size
         ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
@@ -113,19 +131,23 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
 
       ws.onclose = (event) => {
         logger.info('XtermTerminal', `WebSocket closed: code=${event.code}`)
-        if (status === 'ready') {
+        if (mounted.current && event.code !== 1000) {
           setStatus('disconnected')
-          term.write('\r\n\x1b[31mConnection lost\x1b[0m\r\n')
-          term.write('\x1b[90mClick Reconnect to retry.\x1b[0m\r\n')
+          try {
+            term.write('\r\n\x1b[31mConnection lost\x1b[0m\r\n')
+            term.write('\x1b[90mClick Reconnect to retry.\x1b[0m\r\n')
+          } catch {}
         }
-        reconnecting.current = false
+        connecting.current = false
       }
 
       ws.onerror = (err) => {
         logger.error('XtermTerminal', 'WebSocket error', err)
-        setErrorMsg('WebSocket connection failed')
-        setStatus('error')
-        reconnecting.current = false
+        if (mounted.current) {
+          setErrorMsg('WebSocket connection failed')
+          setStatus('error')
+        }
+        connecting.current = false
       }
 
       // Terminal input → WebSocket
@@ -164,40 +186,38 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
         return true
       })
 
-      return () => {
-        resizeObs.disconnect()
-        ws.close()
-        term.dispose()
-      }
+      // Store refs for cleanup
+      resizeObsRef.current = resizeObs
+      connecting.current = false
     } catch (err) {
       logger.error('XtermTerminal', 'Init failed', err)
-      setErrorMsg('Failed to initialize terminal')
-      setStatus('error')
-      reconnecting.current = false
+      if (mounted.current) {
+        setErrorMsg('Failed to initialize terminal')
+        setStatus('error')
+      }
+      connecting.current = false
     }
-  }, [type, serial, status])
+  }, [type, serial])
 
   useEffect(() => {
-    let cleanup: (() => void) | undefined
-    connect().then((fn) => { cleanup = fn }).catch((err) => {
+    mounted.current = true
+    connect().catch((err) => {
       logger.error('XtermTerminal', 'Connect failed', err)
     })
-    return () => { cleanup?.() }
+    return () => {
+      mounted.current = false
+      cleanup()
+    }
   }, [])
 
   const handleReconnect = () => {
-    if (wsRef.current) {
-      wsRef.current.close()
-      wsRef.current = null
-    }
-    reconnecting.current = false
+    connecting.current = false
+    cleanup()
     connect()
   }
 
   const handleClose = () => {
-    if (wsRef.current) {
-      wsRef.current.close()
-    }
+    cleanup()
     onClose()
   }
 

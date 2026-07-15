@@ -1,9 +1,20 @@
 import { spawn, type IPty } from 'node-pty'
 import { WebSocketServer, WebSocket } from 'ws'
 import type { Server } from 'http'
+import { execSync } from 'child_process'
 import { logger } from '../utils/logger.js'
 
 const log = logger.child({ module: 'terminal' })
+
+function getAdbPath(): string {
+  try {
+    execSync('adb version', { encoding: 'utf-8', timeout: 3000 })
+    return 'adb'
+  } catch {
+    // Fallback to config path
+  }
+  return process.env.ADB_PATH || 'adb'
+}
 
 interface TerminalSession {
   id: string
@@ -39,19 +50,23 @@ export function setupTerminalWss(server: Server) {
     let pty: IPty
     try {
       if (type === 'adb' && serial) {
-        pty = spawn('adb', ['-s', serial, 'shell'], {
+        const adbPath = getAdbPath()
+        log.info({ sessionId, adbPath, serial }, 'Spawning ADB shell')
+        pty = spawn(adbPath, ['-s', serial, 'shell'], {
           name: 'xterm-256color',
           cols: 80,
           rows: 30,
           env: { ...process.env, LANG: 'en_US.UTF-8' } as Record<string, string>,
         })
       } else {
-        const shell = process.platform === 'win32' ? 'cmd.exe' : 'bash'
-        pty = spawn(shell, [], {
+        const shell = process.platform === 'win32' ? 'powershell.exe' : 'bash'
+        const cwd = process.env.USERPROFILE || process.env.HOME || '.'
+        log.info({ sessionId, shell, cwd }, 'Spawning local shell')
+        pty = spawn(shell, ['-NoLogo'], {
           name: 'xterm-256color',
           cols: 80,
           rows: 30,
-          cwd: process.env.HOME || process.env.USERPROFILE || '.',
+          cwd,
           env: { ...process.env, LANG: 'en_US.UTF-8' } as Record<string, string>,
         })
       }
