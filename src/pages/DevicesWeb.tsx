@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { RefreshCw, Shield, HardDrive, Terminal, Download, AlertTriangle } from 'lucide-react'
 import { fetchWithAuth } from '../utils/auth'
 import { logger } from '../utils/logger'
-import TtydTerminal from '../components/terminal/TtydTerminal'
+import XtermTerminal from '../components/terminal/XtermTerminal'
 
 interface AdbDevice {
   serial: string
@@ -194,7 +194,8 @@ function DevicesWeb() {
   return (
     <div className="flex flex-col h-full">
       {activeShell ? (
-        <TtydTerminal
+        <XtermTerminal
+          type="adb"
           serial={activeShell.serial}
           onClose={handleDisconnect}
         />

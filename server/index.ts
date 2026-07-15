@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { logger } from './utils/logger.js'
+import { setupTerminalWss } from './services/terminal.js'
 import authRoutes from './routes/auth.js'
 import adbRoutes from './routes/adb.js'
 import logRoutes from './routes/logs.js'
@@ -87,6 +88,7 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
   logger.info({ port: PORT, https: useHttps }, `Server started`)
+  setupTerminalWss(server)
 })
 
 server.on('error', (err) => {
