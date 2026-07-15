@@ -1,6 +1,22 @@
 import dotenv from 'dotenv'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 dotenv.config()
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function resolveAdbPath(): string {
+  // 1. 优先使用项目内置的 ADB
+  const bundled = path.resolve(__dirname, '../bin/platform-tools/adb.exe')
+  if (fs.existsSync(bundled)) return bundled
+  // 2. 使用 .env 配置的路径
+  const configured = process.env.ADB_PATH
+  if (configured && fs.existsSync(configured)) return configured
+  // 3. 回退到 PATH 中的 adb
+  return 'adb'
+}
 
 export const config = {
   // 服务器配置
@@ -17,7 +33,7 @@ export const config = {
 
   // ADB 配置
   adb: {
-    path: process.env.ADB_PATH || 'adb'
+    path: resolveAdbPath()
   },
 
   // ttyd 配置

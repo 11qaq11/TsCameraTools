@@ -9,7 +9,7 @@ function MainLayout() {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-hidden px-6 pt-6 bg-[var(--color-background)]">
+        <main className="flex flex-col flex-1 overflow-hidden px-6 pt-6 bg-[var(--color-background)]">
           <Outlet />
         </main>
       </div>

@@ -54,24 +54,24 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
         fontSize: 14,
         fontFamily: "'Consolas', 'Microsoft YaHei', monospace",
         theme: {
-          background: '#F1F5F9',
-          foreground: '#0F172A',
-          cursor: '#2563EB',
+          background: '#F0F7FF',
+          foreground: '#1E3A5F',
+          cursor: '#3B82F6',
           cursorAccent: '#FFFFFF',
-          selectionBackground: '#DBEAFE',
-          black: '#0F172A',
+          selectionBackground: '#BFDBFE',
+          black: '#1E3A5F',
           red: '#DC2626',
           green: '#16A34A',
           yellow: '#CA8A04',
-          blue: '#2563EB',
+          blue: '#3B82F6',
           magenta: '#9333EA',
           cyan: '#0891B2',
-          white: '#F8FAFC',
+          white: '#F0F7FF',
           brightBlack: '#64748B',
           brightRed: '#EF4444',
           brightGreen: '#22C55E',
           brightYellow: '#EAB308',
-          brightBlue: '#3B82F6',
+          brightBlue: '#60A5FA',
           brightMagenta: '#A855F7',
           brightCyan: '#06B6D4',
           brightWhite: '#FFFFFF',
@@ -224,7 +224,7 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
   const title = type === 'adb' && serial ? `adb -s ${serial} shell` : 'Local Terminal'
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-background)]">
+    <div className="flex flex-col flex-1 min-h-0 relative rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-background)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-2 bg-[var(--color-card-bg)]">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${status === 'ready' ? 'bg-[var(--color-accent-green)] animate-pulse' : status === 'error' ? 'bg-[var(--color-accent-red)]' : 'bg-[var(--color-accent-orange)]'}`} />
@@ -246,12 +246,39 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
           </button>
         </div>
       </div>
+      {type === 'adb' && status === 'ready' && (
+        <div className="px-4 py-1.5 text-xs text-[var(--color-accent-orange)] bg-[var(--color-accent-orange)]/10 border-b border-[var(--color-border)]">
+          Shell 暂不支持中文输入，请使用英文
+        </div>
+      )}
       {status === 'error' && errorMsg && (
-        <div className="px-4 py-2 text-xs text-[var(--color-accent-red)] bg-[var(--color-accent-red)]/10 border-t border-[var(--color-border)]">
+        <div className="px-4 py-2 text-xs text-[var(--color-accent-red)] bg-[var(--color-accent-red)]/10 border-b border-[var(--color-border)]">
           {errorMsg}
         </div>
       )}
-      <div ref={termRef} className="flex-1 bg-[var(--color-background)]" />
+      <div ref={termRef} className="flex-1 p-3 bg-[var(--color-background)]" />
+      {(status === 'disconnected' || status === 'error') && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-background)]/80 backdrop-blur-sm z-10">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-6 shadow-lg">
+            <p className="text-sm text-[var(--color-text-secondary)]">连接已断开</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleReconnect}
+                className="flex items-center gap-2 rounded-lg bg-[var(--color-accent-green)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-green)]/90 transition-colors cursor-pointer"
+              >
+                <RefreshCw size={14} />
+                Reconnect
+              </button>
+              <button
+                onClick={handleClose}
+                className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
