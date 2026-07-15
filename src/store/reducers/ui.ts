@@ -10,7 +10,7 @@ interface UiState {
 
 const initialState: UiState = {
   fontSize: 14,
-  fontFamily: "'JetBrainsMono Nerd Font Mono', 'Cascadia Code', 'DengXian', 'Microsoft YaHei', monospace",
+  fontFamily: "'Consolas', 'Microsoft YaHei', monospace",
   maximized: false,
   fullScreen: false,
 }

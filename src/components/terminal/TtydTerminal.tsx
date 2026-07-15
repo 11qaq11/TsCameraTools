@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchWithAuth } from '../../utils/auth'
 import { logger } from '../../utils/logger'
+import { RefreshCw } from 'lucide-react'
 
 interface TtydTerminalProps {
   serial: string
@@ -128,12 +129,21 @@ export default function TtydTerminal({ serial, onClose }: TtydTerminalProps) {
           <div className="w-2 h-2 rounded-full bg-[var(--color-accent-green)] animate-pulse"></div>
           <span className="text-sm font-mono text-[var(--color-text-secondary)]">{serial}</span>
         </div>
-        <button
-          onClick={handleClose}
-          className="px-3 py-1 text-xs text-[var(--color-accent-red)] hover:bg-[var(--color-accent-red)]/10 rounded transition-colors cursor-pointer"
-        >
-          断开连接
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={startTtyd}
+            className="p-1 rounded hover:bg-[var(--color-sidebar-hover)] text-[var(--color-text-secondary)] cursor-pointer"
+            title="Reconnect"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={handleClose}
+            className="px-3 py-1 text-xs text-[var(--color-accent-red)] hover:bg-[var(--color-accent-red)]/10 rounded transition-colors cursor-pointer"
+          >
+            断开连接
+          </button>
+        </div>
       </div>
       <div className="flex-1 relative">
         <iframe

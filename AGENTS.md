@@ -52,20 +52,20 @@ src/types/index.ts     → ElectronAPI 类型定义
 - 入口：`server/index.ts`
 - 配置：`server/config.ts`（读取 .env）
 - 路由：`server/routes/{auth,adb,logs}.ts`
-- 服务：`server/services/shell.ts`（child_process.spawn）
+- 服务：`server/services/ttyd.ts`（ttyd 进程管理）
 
 ### 前端关键目录
 ```
 src/store/             → Redux Toolkit（ui.ts, sessions.ts）
 src/components/terminal/ → Hyper 风格终端（xterm.js）
-src/hooks/             → useAuth, useSocket, useTerminal, useSearch
+src/hooks/             → useAuth, useSearch
 src/pages/             → Devices, DevicesWeb, Login, AuthCallback
 ```
 
 ### Shell 终端
 - 后端：`child_process.spawn`（pipe 模式）
 - 前端：xterm.js + 本地回显
-- 通信：WebSocket（Socket.io）
+- 通信：Electron IPC（Electron 模式）/ ttyd iframe（Web 模式）
 - 支持 IME 中文输入
 
 ---

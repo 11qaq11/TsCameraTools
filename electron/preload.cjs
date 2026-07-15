@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   adbShellWrite: (id, data) => ipcRenderer.send('adb:shell:write', id, data),
   adbShellKill: (id) => ipcRenderer.send('adb:shell:kill', id),
   adbShellFlushStdin: (id) => ipcRenderer.send('adb:shell:flush-stdin', id),
+  adbShellReconnect: (serial, oldId) => ipcRenderer.invoke('adb:shell:reconnect', serial, oldId),
   onShellData: (callback) => {
     const handler = (_event, id, data) => callback(id, data)
     ipcRenderer.removeAllListeners('adb:shell:data')

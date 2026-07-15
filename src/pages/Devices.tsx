@@ -64,7 +64,7 @@ function DeviceCard({ device, onConnect }: { device: AdbDevice; onConnect: (seri
   )
 }
 
-function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; serial: string; model: string; onClose: () => void }) {
+function ShellPanel({ shellId, serial, model, onClose, onReconnect }: { shellId: string; serial: string; model: string; onClose: () => void; onReconnect: () => void }) {
   const termRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<unknown>(null)
   const inputBuffer = useRef('')
@@ -95,7 +95,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
 
       term = new Terminal({
         fontSize: 14,
-        fontFamily: "'JetBrainsMono Nerd Font Mono', 'Cascadia Code', 'DengXian', 'Microsoft YaHei', monospace",
+        fontFamily: "'Consolas', 'Microsoft YaHei', monospace",
         theme: {
           background: '#FFFFFF',
           foreground: '#0F172A',
@@ -158,8 +158,8 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
       if (textarea) {
         textarea.addEventListener('compositionstart', () => { composing.current = true })
         textarea.addEventListener('compositionend', () => {
-          // 延迟重置composing标志，等待xterm.js处理完IME输入
-          setTimeout(() => { composing.current = false }, 50)
+          // rAF 在浏览器处理完所有待处理的输入事件后触发，比 setTimeout 更可靠
+          requestAnimationFrame(() => { composing.current = false })
         })
       }
 
@@ -481,7 +481,7 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
           sessionActive.current = false
           if (promptTimer) clearTimeout(promptTimer)
           term.write('\r\n\x1b[31mDevice Disconnected\x1b[0m\r\n')
-          term.write('\x1b[90mPlease refresh devices and reconnect.\x1b[0m\r\n')
+          term.write('\x1b[90mPress Enter or click Reconnect to retry.\x1b[0m\r\n')
         }
       }
 
@@ -508,12 +508,21 @@ function ShellPanel({ shellId, serial, model, onClose }: { shellId: string; seri
     <div className="flex flex-col flex-1 min-h-0 rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-background)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-2 bg-[var(--color-card-bg)]">
         <span className="text-xs font-medium font-mono text-[var(--color-accent-green)]">adb -s {serial} shell</span>
-        <button
-          onClick={() => { window.electronAPI.adbShellKill(shellId); onClose() }}
-          className="rounded p-1 hover:bg-[var(--color-accent-red)] cursor-pointer text-[var(--color-text-secondary)]"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onReconnect}
+            className="rounded p-1 hover:bg-[var(--color-sidebar-hover)] cursor-pointer text-[var(--color-text-secondary)]"
+            title="Reconnect"
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            onClick={() => { window.electronAPI.adbShellKill(shellId); onClose() }}
+            className="rounded p-1 hover:bg-[var(--color-accent-red)] cursor-pointer text-[var(--color-text-secondary)]"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
       <div ref={termRef} className="flex-1 bg-[var(--color-background)]" />
     </div>
@@ -590,6 +599,12 @@ function Devices() {
     if (id) setShell({ id, serial, model: device?.model || serial })
   }
 
+  const handleReconnect = async () => {
+    if (!shell) return
+    const newId = await window.electronAPI.adbShellReconnect(shell.serial, shell.id)
+    if (newId) setShell({ ...shell, id: newId })
+  }
+
   if (adbAvailable === null) {
     return <div className="flex items-center justify-center py-16 text-sm text-[var(--color-text-secondary)]">检测中...</div>
   }
@@ -628,7 +643,7 @@ function Devices() {
       )}
 
       {shell && (
-        <ShellPanel shellId={shell.id} serial={shell.serial} model={shell.model} onClose={() => setShell(null)} />
+        <ShellPanel shellId={shell.id} serial={shell.serial} model={shell.model} onClose={() => setShell(null)} onReconnect={handleReconnect} />
       )}
     </div>
   )

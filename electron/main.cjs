@@ -226,6 +226,56 @@ ipcMain.on('adb:shell:flush-stdin', (_event, id) => {
   }
 })
 
+// ADB: reconnect shell (kill old, spawn new)
+ipcMain.handle('adb:shell:reconnect', async (_event, serial, oldId) => {
+  const oldProc = shells.get(oldId)
+  if (oldProc) {
+    oldProc.kill()
+    shells.delete(oldId)
+  }
+  const adb = getAdbPath()
+  if (!adb) return null
+  const id = `${serial}-${Date.now()}`
+
+  const proc = spawn(adb, ['-s', serial, 'shell'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: false,
+    env: { ...process.env, LANG: 'en_US.UTF-8' },
+  })
+  shells.set(id, proc)
+
+  proc.stdout.setEncoding('utf-8')
+  proc.stderr.setEncoding('utf-8')
+  proc.stdin.setDefaultEncoding('utf-8')
+
+  proc.stdout.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb:shell:data', id, data)
+    }
+  })
+  proc.stderr.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb:shell:data', id, data)
+    }
+  })
+  proc.on('error', (err) => {
+    console.error(`[ADB Shell] Reconnect error for ${id}:`, err.message)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
+    }
+  })
+  proc.on('close', (code) => {
+    console.log(`[ADB Shell] Process closed for ${id} with code ${code}`)
+    shells.delete(id)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb:shell:exit', id)
+    }
+  })
+
+  proc.stdin.write('\n')
+  return id
+})
+
 // History: load from file
 ipcMain.handle('history:load', async () => {
   const historyPath = path.join(process.cwd(), '.adb-command-history.json')

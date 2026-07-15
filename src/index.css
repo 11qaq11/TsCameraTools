@@ -38,7 +38,7 @@ body {
 
 /* Terminal font */
 .font-mono {
-  font-family: 'JetBrainsMono Nerd Font Mono', 'Cascadia Code', 'DengXian', 'Microsoft YaHei', monospace;
+  font-family: 'Consolas', 'Microsoft YaHei', monospace;
 }
 
 /* Glow effect */
