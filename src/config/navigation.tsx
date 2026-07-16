@@ -1,4 +1,4 @@
-import { Smartphone, Terminal } from 'lucide-react'
+import { MemoryStick, Smartphone, Terminal } from 'lucide-react'
 import type { NavItem } from '../types'
 
 export const navItems: NavItem[] = [
@@ -14,6 +14,13 @@ export const navItems: NavItem[] = [
     label: '本地终端',
     icon: <Terminal size={20} />,
     path: '/terminal',
+    group: '工具',
+  },
+  {
+    id: 'memory',
+    label: '内存分析',
+    icon: <MemoryStick size={20} />,
+    path: '/memory',
     group: '工具',
   },
 ]

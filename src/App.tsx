@@ -5,6 +5,7 @@ import { isAuthenticated } from './utils/auth'
 
 const Devices = lazy(() => import('./pages/DevicesWeb'))
 const LocalTerminal = lazy(() => import('./pages/LocalTerminal'))
+const MemoryAnalysis = lazy(() => import('./pages/MemoryAnalysis'))
 const Login = lazy(() => import('./pages/Login'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 
@@ -36,6 +37,7 @@ function App() {
         }>
           <Route index element={<Devices />} />
           <Route path="terminal" element={<LocalTerminal />} />
+          <Route path="memory" element={<MemoryAnalysis />} />
         </Route>
       </Routes>
     </Suspense>
