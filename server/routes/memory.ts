@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { exec } from 'child_process'
+import ExcelJS from 'exceljs'
 import { config } from '../config.js'
 import { logger } from '../utils/logger.js'
 import { parseShowmap } from '../parsers/showmap.js'
@@ -89,6 +90,105 @@ router.get('/dmabuf-dump/:serial/:pid', async (req, res) => {
     res.json({ ok: true, data: parseDmabufDump(Number(req.params.pid), out) })
   } catch (e) {
     res.json({ ok: false, error: (e as Error).message })
+  }
+})
+
+// 导出内存数据为 xlsx
+router.post('/export-xlsx', async (req, res) => {
+  try {
+    const { procs, dumpsys, dmabuf, systemMem, startedAt } = req.body as {
+      procs: string[]
+      dumpsys: Record<string, { ts: number; data: { pid: number; totalPss: number; eglMtrackPss: number; totalRss: number } }[]>
+      dmabuf: Record<string, { ts: number; data: { pid: number; ionKb: number } }[]>
+      systemMem: { ts: number; data: { fields: Record<string, number> } }[]
+      startedAt: number
+    }
+
+    const wb = new ExcelJS.Workbook()
+    wb.created = new Date()
+
+    const fmtTime = (ts: number) => {
+      const d = new Date(ts)
+      const ms = String(d.getMilliseconds()).padStart(3, '0')
+      return `${d.toLocaleTimeString('zh-CN')}.${ms}`
+    }
+
+    // Sheet1: 汇总趋势
+    const ws1 = wb.addWorksheet('汇总趋势')
+    const summaryHeader = ['时间']
+    for (const name of procs) summaryHeader.push(`${name} PSS(KB)`)
+    summaryHeader.push('合计 PSS(KB)', '合计 dmabuf(KB)', '总占用(KB)')
+    ws1.addRow(summaryHeader)
+
+    // 收集所有时间戳
+    const allTs = new Set<number>()
+    for (const name of procs) {
+      for (const s of (dumpsys[name] ?? [])) allTs.add(s.ts)
+      for (const s of (dmabuf[name] ?? [])) allTs.add(s.ts)
+    }
+    const sortedTs = [...allTs].sort((a, b) => a - b)
+
+    for (const ts of sortedTs) {
+      const row: (string | number)[] = [fmtTime(ts)]
+      let totalPss = 0
+      let totalDmabuf = 0
+      for (const name of procs) {
+        const ds = dumpsys[name]?.find(s => s.ts === ts)
+        const pss = ds?.data.totalPss ?? 0
+        row.push(pss || '')
+        totalPss += pss
+        const dm = dmabuf[name]?.find(s => s.ts === ts)
+        totalDmabuf += dm?.data.ionKb ?? 0
+      }
+      row.push(totalPss, totalDmabuf, totalPss + totalDmabuf)
+      ws1.addRow(row)
+    }
+
+    // Sheet2..N: 每进程明细
+    for (const name of procs) {
+      const ws = wb.addWorksheet(name.substring(0, 31)) // Excel 限制 31 字符
+      ws.addRow(['时间', 'PSS(KB)', 'EGL mtrack(KB)', 'RSS(KB)', 'dmabuf(KB)'])
+
+      const dumps = dumpsys[name] ?? []
+      const dms = dmabuf[name] ?? []
+      const allProcTs = new Set<number>()
+      for (const s of dumps) allProcTs.add(s.ts)
+      for (const s of dms) allProcTs.add(s.ts)
+      const procTs = [...allProcTs].sort((a, b) => a - b)
+
+      for (const ts of procTs) {
+        const ds = dumps.find(s => s.ts === ts)?.data
+        const dm = dms.find(s => s.ts === ts)?.data
+        ws.addRow([
+          fmtTime(ts),
+          ds?.totalPss ?? '',
+          ds?.eglMtrackPss ?? '',
+          ds?.totalRss ?? '',
+          dm?.ionKb ?? '',
+        ])
+      }
+    }
+
+    // 末 sheet: 整机 meminfo
+    if (systemMem.length > 0) {
+      const wsMem = wb.addWorksheet('meminfo')
+      const fields = Object.keys(systemMem[0].data.fields)
+      wsMem.addRow(['时间', ...fields])
+      for (const s of systemMem) {
+        const row: (string | number)[] = [fmtTime(s.ts)]
+        for (const f of fields) row.push(s.data.fields[f] ?? '')
+        wsMem.addRow(row)
+      }
+    }
+
+    const filename = `memory_${new Date(startedAt || Date.now()).toISOString().replace(/[:.]/g, '-').substring(0, 19)}.xlsx`
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    await wb.xlsx.write(res)
+    res.end()
+  } catch (e) {
+    log.error({ error: (e as Error).message }, 'Export xlsx failed')
+    res.status(500).json({ error: (e as Error).message })
   }
 })
 

@@ -96,6 +96,7 @@ export default function Dashboard() {
 
     dispatch(clearCapture())
     dispatch(setPolling(true))
+    startedAtRef.current = Date.now()
 
     socket.emit('memory:start', {
       serial,
@@ -119,9 +120,37 @@ export default function Dashboard() {
     dispatch(setStage('detail'))
   }
 
-  const handleExport = () => {
-    // Placeholder for export functionality
-    logger.info('Dashboard', 'Export requested')
+  const [exporting, setExporting] = useState(false)
+  const startedAtRef = useRef(Date.now())
+
+  const handleExport = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const res = await fetch('/api/memory/export-xlsx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          procs: selectedNames,
+          dumpsys: dumpsysByName,
+          dmabuf: dmabufByName,
+          systemMem,
+          startedAt: startedAtRef.current,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `memory_${new Date(startedAtRef.current).toISOString().replace(/[:.]/g, '-').substring(0, 19)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      logger.error('Dashboard', `Export failed: ${(e as Error).message}`)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -195,10 +224,11 @@ export default function Dashboard() {
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[var(--color-card-bg)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-sidebar-hover)] border border-[var(--color-border)] transition-colors cursor-pointer"
+            disabled={exporting}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[var(--color-card-bg)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-sidebar-hover)] border border-[var(--color-border)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Download size={14} />
-            导出
+            {exporting ? '导出中...' : '导出'}
           </button>
         </div>
       </div>
