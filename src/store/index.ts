@@ -4,11 +4,13 @@
 import { configureStore } from '@reduxjs/toolkit'
 import uiReducer from './reducers/ui'
 import sessionsReducer from './reducers/sessions'
+import memoryReducer from './memory'
 
 export const store = configureStore({
   reducer: {
     ui: uiReducer,
-    sessions: sessionsReducer
+    sessions: sessionsReducer,
+    memory: memoryReducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
