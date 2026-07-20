@@ -12,7 +12,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchWithAuth } from '../../utils/auth'
 import { logger } from '../../utils/logger'
-import { setProcesses, setSelected, setStage } from '../../store/memory'
+import { setProcesses, setCustomProcesses, setSelected, setStage } from '../../store/memory'
 import type { ProcessStatus, ProcessEntry } from '../../types/memory'
 import type { RootState } from '../../store'
 
@@ -41,6 +41,7 @@ const PRESET_PROCESSES: ProcessEntry[] = [
 export default function ProcessManager() {
   const dispatch = useDispatch()
   const serial = useSelector((s: RootState) => s.memory.serial)
+  const customProcesses = useSelector((s: RootState) => s.memory.customProcesses)
 
   const [processes, setLocalProcesses] = useState<ProcessStatus[]>([])
   const [selectedNames, setLocalSelected] = useState<Set<string>>(new Set())
@@ -72,7 +73,19 @@ export default function ProcessManager() {
   useEffect(() => {
     const init = async () => {
       setLoading(true)
-      const initial: ProcessStatus[] = PRESET_PROCESSES.map((p) => ({
+      // 合并预设进程和用户自定义进程
+      const allProcessEntries: ProcessEntry[] = [
+        ...PRESET_PROCESSES,
+        ...customProcesses,
+      ]
+      // 去重（基于name）
+      const seen = new Set<string>()
+      const deduped = allProcessEntries.filter((p) => {
+        if (seen.has(p.name)) return false
+        seen.add(p.name)
+        return true
+      })
+      const initial: ProcessStatus[] = deduped.map((p) => ({
         ...p,
         pid: null,
         running: false,
@@ -83,7 +96,7 @@ export default function ProcessManager() {
       setLoading(false)
     }
     init()
-  }, [refreshPids])
+  }, [refreshPids, customProcesses])
 
   const handleRefresh = async () => {
     setLoading(true)
@@ -116,6 +129,14 @@ export default function ProcessManager() {
       running: false,
     }
     setLocalProcesses((prev) => [...prev, entry])
+    // 保存到Redux
+    const newCustom: ProcessEntry = {
+      name,
+      alias: addAlias.trim() || undefined,
+      dynamic: true,
+      category: 'app',
+    }
+    dispatch(setCustomProcesses([...customProcesses, newCustom]))
     setAddName('')
     setAddAlias('')
     setShowAdd(false)
@@ -128,6 +149,8 @@ export default function ProcessManager() {
       next.delete(name)
       return next
     })
+    // 从Redux中删除
+    dispatch(setCustomProcesses(customProcesses.filter((p) => p.name !== name)))
   }
 
   const handleEnter = () => {

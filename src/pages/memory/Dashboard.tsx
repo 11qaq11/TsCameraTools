@@ -9,8 +9,8 @@ import {
   Activity,
 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
-import { io, Socket } from 'socket.io-client'
 import { setPolling, setInterval, setShowSystemMem, pushSamples, clearCapture, setDetail, setStage } from '../../store/memory'
+import { fetchWithAuth } from '../../utils/auth'
 import type { RootState } from '../../store'
 import type { Sample } from '../../types/memory'
 import TrendChart from '../../components/memory/TrendChart'
@@ -37,9 +37,10 @@ export default function Dashboard() {
     dmabufByName,
     pidByName,
     systemMem,
+    processes,
   } = useSelector((s: RootState) => s.memory)
 
-  const socketRef = useRef<Socket | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
 
   // Summary card: total PSS + dmabuf for selected processes
@@ -59,58 +60,119 @@ export default function Dashboard() {
     }
   }, [selectedNames, dumpsysByName, dmabufByName])
 
-  // WebSocket connection
+  // Fetch PIDs on mount
+  useEffect(() => {
+    if (!serial || selectedNames.length === 0) return
+
+    const fetchPids = async () => {
+      try {
+        const res = await fetchWithAuth(`/api/memory/pids/${serial}`, {
+          method: 'POST',
+          body: JSON.stringify({ names: selectedNames }),
+        })
+        const pidMap = (await res.json()) as Record<string, number | null>
+        // Update pidByName in Redux via pushSamples
+        const pidSamples: Sample[] = selectedNames.map((name) => ({
+          kind: 'dumpsys' as const,
+          name,
+          pid: pidMap[name] ?? null,
+          timestamp: Date.now(),
+          data: {
+            pid: pidMap[name] ?? 0,
+            totalPss: 0, eglMtrackPss: 0, pssNoEgl: 0,
+            totalRss: 0, totalPrivateDirty: 0, totalPrivateClean: 0,
+            totalSwapPss: 0, categories: [],
+          },
+        }))
+        dispatch(pushSamples(pidSamples))
+      } catch (err) {
+        logger.error('Dashboard', 'Failed to fetch PIDs:', err)
+      }
+    }
+    fetchPids()
+  }, [serial, selectedNames, dispatch])
+
+  // WebSocket connection (native WebSocket to /memory path)
   useEffect(() => {
     if (!serial) return
 
-    const socket = io(window.location.origin, {
-      path: '/socket.io',
-      transports: ['websocket'],
-    })
+    const isDev = import.meta.env.DEV
+    const wsHost = isDev ? (import.meta.env.VITE_API_HOST || 'localhost') : window.location.hostname
+    const wsPort = isDev ? (import.meta.env.VITE_API_PORT || '3000') : window.location.port || '3000'
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${wsHost}:${wsPort}/memory`
 
-    socket.on('connect', () => {
+    const ws = new WebSocket(wsUrl)
+
+    ws.onopen = () => {
       setConnected(true)
-      logger.info('Dashboard', 'WebSocket connected')
-    })
+      logger.info('Dashboard', 'Memory WebSocket connected')
+    }
 
-    socket.on('disconnect', () => {
+    ws.onclose = () => {
       setConnected(false)
-      logger.info('Dashboard', 'WebSocket disconnected')
-    })
+      logger.info('Dashboard', 'Memory WebSocket disconnected')
+    }
 
-    socket.on('memory:samples', (samples: Sample[]) => {
-      dispatch(pushSamples(samples))
-    })
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'samples' && msg.samples) {
+          dispatch(pushSamples(msg.samples as Sample[]))
+        } else if (msg.type === 'ready') {
+          logger.info('Dashboard', 'Memory WebSocket ready')
+        }
+      } catch (e) {
+        logger.error('Dashboard', 'Failed to parse WS message:', e)
+      }
+    }
 
-    socketRef.current = socket
+    ws.onerror = (err) => {
+      logger.error('Dashboard', 'Memory WebSocket error:', err)
+    }
+
+    wsRef.current = ws
 
     return () => {
-      socket.disconnect()
-      socketRef.current = null
+      ws.close()
+      wsRef.current = null
     }
   }, [serial, dispatch])
 
   const handleStart = useCallback(() => {
-    const socket = socketRef.current
-    if (!socket || !serial) return
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
 
     dispatch(clearCapture())
     dispatch(setPolling(true))
     startedAtRef.current = Date.now()
 
-    socket.emit('memory:start', {
-      serial,
-      names: selectedNames,
-      intervalMs,
-      showSystemMem,
+    // 构建进程列表，包含动态标记
+    const procs = selectedNames.map((name) => {
+      const proc = processes.find((p) => p.name === name)
+      return {
+        name,
+        pid: pidByName[name] ?? null,
+        dynamic: proc?.dynamic ?? true,
+      }
     })
-  }, [serial, selectedNames, intervalMs, showSystemMem, dispatch])
+
+    ws.send(JSON.stringify({
+      type: 'start',
+      options: {
+        serial,
+        procs,
+        intervalMs,
+        showSystemMem,
+      },
+    }))
+  }, [serial, selectedNames, intervalMs, showSystemMem, processes, pidByName, dispatch])
 
   const handleStop = useCallback(() => {
-    const socket = socketRef.current
-    if (!socket) return
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
 
-    socket.emit('memory:stop')
+    ws.send(JSON.stringify({ type: 'stop' }))
     dispatch(setPolling(false))
   }, [dispatch])
 
@@ -127,7 +189,7 @@ export default function Dashboard() {
     if (exporting) return
     setExporting(true)
     try {
-      const res = await fetch('/api/memory/export-xlsx', {
+      const res = await fetchWithAuth('/api/memory/export-xlsx', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -3,6 +3,7 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 import type {
   MemoryStage,
   DeviceInfo,
+  ProcessEntry,
   ProcessStatus,
   Sample,
   ParsedDumpsys,
@@ -20,6 +21,7 @@ interface MemoryState {
   device: DeviceInfo | null
   isRoot: boolean
   processes: ProcessStatus[]
+  customProcesses: ProcessEntry[]  // 用户添加的自定义进程
   selectedNames: string[]
   polling: boolean
   intervalMs: number
@@ -42,6 +44,7 @@ const initialState: MemoryState = {
   device: null,
   isRoot: false,
   processes: [],
+  customProcesses: [],
   selectedNames: [],
   polling: false,
   intervalMs: 1000,
@@ -74,6 +77,9 @@ const memorySlice = createSlice({
     },
     setProcesses(state, action: PayloadAction<ProcessStatus[]>) {
       state.processes = action.payload
+    },
+    setCustomProcesses(state, action: PayloadAction<ProcessEntry[]>) {
+      state.customProcesses = action.payload
     },
     setSelected(state, action: PayloadAction<string[]>) {
       state.selectedNames = action.payload
@@ -137,6 +143,7 @@ export const {
   setDevice,
   setRoot,
   setProcesses,
+  setCustomProcesses,
   setSelected,
   setPolling,
   setInterval,
