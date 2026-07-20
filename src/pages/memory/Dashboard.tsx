@@ -236,9 +236,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)] bg-[var(--color-card-bg)]">
+    <div className="flex flex-col h-full overflow-y-auto">
+      {/* Toolbar - 固定在顶部 */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)] bg-[var(--color-card-bg)]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => dispatch(setStage('process'))}
@@ -315,8 +315,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-0 p-4 gap-4 overflow-y-auto">
+      {/* Main content - 允许自然扩展 */}
+      <div className="flex flex-col p-4 gap-4">
         {/* Process cards */}
         <div>
           <div className="flex items-center gap-2 mb-3">
