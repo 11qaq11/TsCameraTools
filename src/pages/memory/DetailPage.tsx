@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { ChevronLeft, RefreshCw, Info, Loader2 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
 import { setStage } from '../../store/memory'
@@ -27,6 +27,17 @@ export default function DetailPage() {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshMs, setRefreshMs] = useState(2000)
   const [mode, setMode] = useState<'current' | 'peak'>('current')
+  // 使用ref跟踪错误状态，避免不必要的重渲染
+  const errorRef = useRef<{ msg: string | null; root: boolean }>({ msg: null, root: false })
+
+  const updateError = useCallback((msg: string | null, root: boolean) => {
+    // 只有在错误状态真正改变时才更新state
+    if (errorRef.current.msg !== msg || errorRef.current.root !== root) {
+      errorRef.current = { msg, root }
+      setError(msg)
+      setNeedRoot(root)
+    }
+  }, [])
 
   const fetchShowmap = useCallback(async (silent = false) => {
     if (detailPid == null || !serial) return
@@ -37,19 +48,16 @@ export default function DetailPage() {
       const data = await res.json()
       if (data.ok && data.data) {
         setShowmap(data.data.mappings)
-        // 只有在成功时才清除错误状态
-        setError(null)
-        setNeedRoot(false)
+        updateError(null, false)
       } else {
-        setError(data.error ?? '拉取 showmap 失败')
-        setNeedRoot(!!data.needRoot)
+        updateError(data.error ?? '拉取 showmap 失败', !!data.needRoot)
       }
     } catch (e) {
-      setError((e as Error).message)
+      updateError((e as Error).message, false)
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [detailPid, serial])
+  }, [detailPid, serial, updateError])
 
   useEffect(() => {
     void fetchShowmap()

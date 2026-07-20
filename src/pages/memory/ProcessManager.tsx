@@ -92,8 +92,13 @@ export default function ProcessManager() {
         running: false,
       }))
       const resolved = await refreshPids(initial)
-      setLocalProcesses(resolved)
-      setLocalSelected(new Set(resolved.filter((p) => p.running).map((p) => p.name)))
+      // 将运行中进程排在顶部
+      const sorted = [...resolved].sort((a, b) => {
+        if (a.running === b.running) return 0
+        return a.running ? -1 : 1
+      })
+      setLocalProcesses(sorted)
+      setLocalSelected(new Set(sorted.filter((p) => p.running).map((p) => p.name)))
       setLoading(false)
     }
     init()
@@ -102,7 +107,12 @@ export default function ProcessManager() {
   const handleRefresh = async () => {
     setLoading(true)
     const resolved = await refreshPids(processes)
-    setLocalProcesses(resolved)
+    // 将运行中进程排在顶部
+    const sorted = [...resolved].sort((a, b) => {
+      if (a.running === b.running) return 0
+      return a.running ? -1 : 1
+    })
+    setLocalProcesses(sorted)
     setLoading(false)
   }
 
