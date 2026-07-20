@@ -25,6 +25,7 @@ const PRESET_PROCESSES: ProcessEntry[] = [
   { name: 'camerahalserver', alias: 'HALSERVER', category: 'service' },
   { name: 'vivocameraserver', alias: 'VIVOSERVER', category: 'service' },
   { name: 'vendor.qti.camera.provider', alias: 'QTI_PROVIDER', category: 'service' },
+  { name: 'vendor.qti.camera.provider-service_64', alias: 'QCOM_HAL64', category: 'service' },
   { name: 'camx.shimserver', alias: 'SHIM', category: 'service' },
   { name: 'camxservicemanager', alias: 'SVM', category: 'service' },
   { name: 'camxcore', alias: 'CORE', dynamic: true, category: 'service' },
