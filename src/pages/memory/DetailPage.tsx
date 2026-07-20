@@ -16,7 +16,7 @@ const fmtTs = (ts: number): string => {
 
 export default function DetailPage() {
   const dispatch = useDispatch()
-  const { detailPid, detailName, dumpsysByName, peakDumpsys } = useSelector(
+  const { detailPid, detailName, dumpsysByName, peakDumpsys, serial } = useSelector(
     (s: RootState) => s.memory
   )
 
@@ -28,11 +28,11 @@ export default function DetailPage() {
   const [mode, setMode] = useState<'current' | 'peak'>('current')
 
   const fetchShowmap = useCallback(async (silent = false) => {
-    if (detailPid == null) return
+    if (detailPid == null || !serial) return
     if (!silent) setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/memory/showmap/${encodeURIComponent(detailPid)}`)
+      const res = await fetch(`/api/memory/showmap/${serial}/${encodeURIComponent(detailPid)}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.ok && data.data) setShowmap(data.data.mappings)
@@ -42,7 +42,7 @@ export default function DetailPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [detailPid])
+  }, [detailPid, serial])
 
   useEffect(() => {
     void fetchShowmap()
@@ -225,6 +225,8 @@ export default function DetailPage() {
                 systemMem={[]}
                 selectedNames={detailName ? [detailName] : []}
                 showSystemMem={false}
+                dynamicYAxis={true}
+                recentCount={20}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)] text-sm">

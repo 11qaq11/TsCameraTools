@@ -66,11 +66,13 @@ export class MemoryPoller {
   private intervalMs = 1000
   private timer: NodeJS.Timeout | null = null
   private serial = ''
+  private running = false
 
   constructor(private send: (data: any) => void) {}
 
   start(opts: PollerOptions) {
     this.stop()
+    this.running = true
     this.serial = opts.serial
     this.intervalMs = opts.intervalMs
     this.showSystemMem = opts.showSystemMem
@@ -86,6 +88,7 @@ export class MemoryPoller {
   }
 
   stop() {
+    this.running = false
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
@@ -97,8 +100,10 @@ export class MemoryPoller {
   }
 
   private async tick() {
+    if (!this.running) return
     const start = Date.now()
     await this.captureTick()
+    if (!this.running) return
     const delay = Math.max(0, this.intervalMs - (Date.now() - start))
     this.timer = setTimeout(() => void this.tick(), delay)
   }

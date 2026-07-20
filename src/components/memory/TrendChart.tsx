@@ -8,6 +8,10 @@ interface TrendChartProps {
   systemMem: Timed<ParsedMeminfo>[]
   selectedNames: string[]
   showSystemMem: boolean
+  /** 是否使用动态纵坐标（根据最近N条数据自动调整） */
+  dynamicYAxis?: boolean
+  /** 动态纵坐标参考的数据点数量 */
+  recentCount?: number
 }
 
 export default function TrendChart({
@@ -16,36 +20,58 @@ export default function TrendChart({
   systemMem,
   selectedNames,
   showSystemMem,
+  dynamicYAxis = false,
+  recentCount = 20,
 }: TrendChartProps) {
   const option = useMemo(() => {
     const series: object[] = []
     const allTimestamps = new Set<number>()
 
-    // Collect PSS series per process
+    // 计算所有选中进程的总占用
+    const totalPssMap = new Map<number, number>()
+    const totalDmabufMap = new Map<number, number>()
+
     for (const name of selectedNames) {
       const dumps = dumpsysByName[name]
       if (dumps?.length) {
-        dumps.forEach((d) => allTimestamps.add(d.ts))
-        series.push({
-          name: `${name} PSS`,
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
-          data: dumps.map((d) => [d.ts, d.data.totalPss]),
-        })
+        for (const d of dumps) {
+          allTimestamps.add(d.ts)
+          totalPssMap.set(d.ts, (totalPssMap.get(d.ts) ?? 0) + d.data.totalPss)
+        }
       }
       const dmabufs = dmabufByName[name]
       if (dmabufs?.length) {
-        dmabufs.forEach((d) => allTimestamps.add(d.ts))
-        series.push({
-          name: `${name} dmabuf`,
-          type: 'line',
-          smooth: true,
-          showSymbol: false,
-          lineStyle: { type: 'dashed' },
-          data: dmabufs.map((d) => [d.ts, d.data.ionKb]),
-        })
+        for (const d of dmabufs) {
+          allTimestamps.add(d.ts)
+          totalDmabufMap.set(d.ts, (totalDmabufMap.get(d.ts) ?? 0) + d.data.ionKb)
+        }
       }
+    }
+
+    // 总PSS折线图
+    if (totalPssMap.size > 0) {
+      const pssData = [...totalPssMap.entries()].sort((a, b) => a[0] - b[0])
+      series.push({
+        name: '总 PSS',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        areaStyle: { opacity: 0.15 },
+        data: pssData,
+      })
+    }
+
+    // 总dmabuf折线图
+    if (totalDmabufMap.size > 0) {
+      const dmabufData = [...totalDmabufMap.entries()].sort((a, b) => a[0] - b[0])
+      series.push({
+        name: '总 dmabuf',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { type: 'dashed' },
+        data: dmabufData,
+      })
     }
 
     // System memory
@@ -66,6 +92,50 @@ export default function TrendChart({
     }
 
     const timestamps = [...allTimestamps].sort((a, b) => a - b)
+
+    // 动态纵坐标：根据最近N条数据计算min/max
+    let yAxisConfig: Record<string, unknown> = {
+      type: 'value',
+      name: 'KB',
+      nameTextStyle: { color: '#888', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#444' } },
+      axisLabel: { color: '#888', fontSize: 10 },
+      splitLine: { lineStyle: { color: '#333' } },
+    }
+
+    if (dynamicYAxis) {
+      // 收集最近N条数据的所有值
+      const recentValues: number[] = []
+
+      for (const name of selectedNames) {
+        const dumps = dumpsysByName[name]
+        if (dumps?.length) {
+          const recent = dumps.slice(-recentCount)
+          for (const d of recent) {
+            recentValues.push(d.data.totalPss)
+          }
+        }
+        const dmabufs = dmabufByName[name]
+        if (dmabufs?.length) {
+          const recent = dmabufs.slice(-recentCount)
+          for (const d of recent) {
+            recentValues.push(d.data.ionKb)
+          }
+        }
+      }
+
+      if (recentValues.length > 0) {
+        const minVal = Math.min(...recentValues)
+        const maxVal = Math.max(...recentValues)
+        const padding = (maxVal - minVal) * 0.1 || maxVal * 0.1 || 100
+
+        yAxisConfig = {
+          ...yAxisConfig,
+          min: Math.max(0, Math.floor((minVal - padding) / 100) * 100),
+          max: Math.ceil((maxVal + padding) / 100) * 100,
+        }
+      }
+    }
 
     return {
       tooltip: {
@@ -104,14 +174,7 @@ export default function TrendChart({
         },
         splitLine: { show: false },
       },
-      yAxis: {
-        type: 'value',
-        name: 'KB',
-        nameTextStyle: { color: '#888', fontSize: 10 },
-        axisLine: { lineStyle: { color: '#444' } },
-        axisLabel: { color: '#888', fontSize: 10 },
-        splitLine: { lineStyle: { color: '#333' } },
-      },
+      yAxis: yAxisConfig,
       series,
       animation: false,
     }
