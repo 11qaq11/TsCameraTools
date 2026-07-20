@@ -36,16 +36,31 @@ export default function MemoryAnalysis() {
     saveSnapshot()
   }, [stage, selectedNames, saveSnapshot])
 
-  if (stage === 'device') return <DeviceSelect />
-  if (stage === 'process') return <ProcessManager />
-  if (stage === 'dashboard') return <Dashboard />
-  if (stage === 'detail') return <DetailPage />
-  if (stage === 'dmabuf-detail') return <DmabufDetailPage />
-
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">内存分析</h1>
-      <p className="text-[var(--color-text-secondary)]">「{stage}」阶段开发中...</p>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* DeviceSelect 和 ProcessManager 在对应阶段显示 */}
+      <div className={stage === 'device' ? '' : 'hidden'}>
+        <DeviceSelect />
+      </div>
+      <div className={stage === 'process' ? '' : 'hidden'}>
+        <ProcessManager />
+      </div>
+      {/* Dashboard 保持挂载，进入detail时隐藏但不断开WebSocket */}
+      <div className={(stage === 'dashboard' || stage === 'detail' || stage === 'dmabuf-detail') ? '' : 'hidden'}>
+        <Dashboard />
+      </div>
+      {/* DetailPage 在 detail 阶段显示，覆盖在 Dashboard 上方 */}
+      {stage === 'detail' && (
+        <div className="absolute inset-0 z-10 bg-[var(--color-background)]">
+          <DetailPage />
+        </div>
+      )}
+      {/* DmabufDetailPage 在 dmabuf-detail 阶段显示 */}
+      {stage === 'dmabuf-detail' && (
+        <div className="absolute inset-0 z-10 bg-[var(--color-background)]">
+          <DmabufDetailPage />
+        </div>
+      )}
     </div>
   )
 }
