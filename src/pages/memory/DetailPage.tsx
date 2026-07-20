@@ -31,17 +31,18 @@ export default function DetailPage() {
   const fetchShowmap = useCallback(async (silent = false) => {
     if (detailPid == null || !serial) return
     if (!silent) setLoading(true)
-    setError(null)
-    setNeedRoot(false)
     try {
       const res = await fetch(`/api/memory/showmap/${serial}/${encodeURIComponent(detailPid)}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.ok && data.data) {
         setShowmap(data.data.mappings)
+        // 只有在成功时才清除错误状态
+        setError(null)
+        setNeedRoot(false)
       } else {
         setError(data.error ?? '拉取 showmap 失败')
-        if (data.needRoot) setNeedRoot(true)
+        setNeedRoot(!!data.needRoot)
       }
     } catch (e) {
       setError((e as Error).message)
