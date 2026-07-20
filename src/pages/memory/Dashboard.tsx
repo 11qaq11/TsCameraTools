@@ -101,6 +101,14 @@ export default function Dashboard() {
     fetchPids()
   }, [serial, selectedNames, dispatch])
 
+  // 重置polling状态（进入仪表盘时）
+  useEffect(() => {
+    // 如果WebSocket未连接或未在采集，重置polling状态
+    if (!connected || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      dispatch(setPolling(false))
+    }
+  }, [connected, dispatch])
+
   // WebSocket connection (native WebSocket to /memory path)
   useEffect(() => {
     if (!serial) return
@@ -115,11 +123,14 @@ export default function Dashboard() {
 
     ws.onopen = () => {
       setConnected(true)
+      // 连接建立时重置polling状态
+      dispatch(setPolling(false))
       logger.info('Dashboard', 'Memory WebSocket connected')
     }
 
     ws.onclose = () => {
       setConnected(false)
+      dispatch(setPolling(false))
       logger.info('Dashboard', 'Memory WebSocket disconnected')
     }
 
@@ -365,8 +376,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Trend chart */}
-        <div className="flex-1 min-h-[300px] rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-4">
+        {/* Trend chart - 固定高度 */}
+        <div className="h-[300px] rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-4">
           <div className="text-sm font-medium text-[var(--color-text-primary)] mb-3">内存趋势</div>
           <div className="h-[calc(100%-2rem)]">
             <TrendChart
@@ -379,12 +390,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Mini lists */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {selectedNames.slice(0, 3).map((name) => (
+        {/* Mini lists - 横向滚动显示所有进程 */}
+        <div className="flex gap-4 overflow-x-auto pb-2">
+          {selectedNames.map((name) => (
             <div
               key={name}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3"
+              className="flex-shrink-0 w-[300px] rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-3"
             >
               <MiniList
                 data={dumpsysByName[name] ?? []}
