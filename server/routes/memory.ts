@@ -77,9 +77,28 @@ router.post('/pids/:serial', async (req, res) => {
 router.get('/showmap/:serial/:pid', async (req, res) => {
   try {
     const out = await shell(req.params.serial, `showmap ${req.params.pid}`)
+    // 检查是否包含权限错误
+    if (out.includes('Failed to parse file') || out.includes('Permission denied')) {
+      res.json({
+        ok: false,
+        error: '需要root权限才能读取smaps文件。请确保设备已root并使用adb root命令。',
+        needRoot: true,
+      })
+      return
+    }
     res.json({ ok: true, data: parseShowmap(Number(req.params.pid), out) })
   } catch (e) {
-    res.json({ ok: false, error: (e as Error).message })
+    const errMsg = (e as Error).message
+    // 检查是否是权限相关的错误
+    if (errMsg.includes('Failed to parse') || errMsg.includes('Permission denied') || errMsg.includes('smaps')) {
+      res.json({
+        ok: false,
+        error: '需要root权限才能读取smaps文件。请确保设备已root并使用adb root命令。',
+        needRoot: true,
+      })
+    } else {
+      res.json({ ok: false, error: errMsg })
+    }
   }
 })
 

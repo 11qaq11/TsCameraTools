@@ -23,6 +23,7 @@ export default function DetailPage() {
   const [showmap, setShowmap] = useState<ShowmapMapping[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [needRoot, setNeedRoot] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshMs, setRefreshMs] = useState(2000)
   const [mode, setMode] = useState<'current' | 'peak'>('current')
@@ -31,12 +32,17 @@ export default function DetailPage() {
     if (detailPid == null || !serial) return
     if (!silent) setLoading(true)
     setError(null)
+    setNeedRoot(false)
     try {
       const res = await fetch(`/api/memory/showmap/${serial}/${encodeURIComponent(detailPid)}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      if (data.ok && data.data) setShowmap(data.data.mappings)
-      else setError(data.error ?? '拉取 showmap 失败')
+      if (data.ok && data.data) {
+        setShowmap(data.data.mappings)
+      } else {
+        setError(data.error ?? '拉取 showmap 失败')
+        if (data.needRoot) setNeedRoot(true)
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -183,8 +189,23 @@ export default function DetailPage() {
       {/* Main content */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {error && (
-          <div className="rounded-lg border border-[var(--color-accent-red)]/30 bg-[var(--color-accent-red)]/10 px-4 py-3 text-sm text-[var(--color-accent-red)]">
-            {error}
+          <div className={`rounded-lg border px-4 py-3 text-sm ${
+            needRoot
+              ? 'border-[var(--color-accent-orange)]/30 bg-[var(--color-accent-orange)]/10 text-[var(--color-accent-orange)]'
+              : 'border-[var(--color-accent-red)]/30 bg-[var(--color-accent-red)]/10 text-[var(--color-accent-red)]'
+          }`}>
+            <div className="font-medium">{error}</div>
+            {needRoot && (
+              <div className="mt-2 text-xs opacity-80">
+                <p>showmap 需要读取 /proc/[pid]/smaps 文件，这需要 root 权限。</p>
+                <p className="mt-1">解决方法：</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>确保设备已获取 root 权限</li>
+                  <li>执行 <code className="bg-black/10 px-1 rounded">adb root</code> 命令</li>
+                  <li>重新连接设备后重试</li>
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
