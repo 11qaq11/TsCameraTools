@@ -43,7 +43,7 @@ export default function Dashboard() {
   const wsRef = useRef<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
 
-  // Summary card: total PSS + dmabuf for selected processes
+  // Summary card: total PSS + dmabuf for selected processes + MemAvailable
   const summary = useMemo(() => {
     let totalPss = 0
     let totalDmabuf = 0
@@ -53,12 +53,21 @@ export default function Dashboard() {
       const dmabufs = dmabufByName[name]
       if (dmabufs?.length) totalDmabuf += dmabufs[dmabufs.length - 1].data.ionKb
     }
+
+    // 获取最新的 MemAvailable
+    let memAvailableKb = 0
+    if (showSystemMem && systemMem.length > 0) {
+      const latest = systemMem[systemMem.length - 1]
+      memAvailableKb = latest.data.fields?.MemAvailable ?? 0
+    }
+
     return {
       pssMb: (totalPss / 1024).toFixed(1),
       dmabufMb: (totalDmabuf / 1024).toFixed(1),
       totalMb: ((totalPss + totalDmabuf) / 1024).toFixed(1),
+      memAvailableMb: (memAvailableKb / 1024).toFixed(1),
     }
-  }, [selectedNames, dumpsysByName, dmabufByName])
+  }, [selectedNames, dumpsysByName, dmabufByName, showSystemMem, systemMem])
 
   // Fetch PIDs on mount
   useEffect(() => {
@@ -322,7 +331,7 @@ export default function Dashboard() {
         </div>
 
         {/* Summary card */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className={`grid gap-4 ${showSystemMem ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-4">
             <div className="text-xs text-[var(--color-text-secondary)] mb-1">总 PSS</div>
             <div className="text-2xl font-mono font-bold text-[var(--color-accent-blue)]">
@@ -344,6 +353,16 @@ export default function Dashboard() {
               <span className="text-sm font-normal text-[var(--color-text-secondary)] ml-1">MB</span>
             </div>
           </div>
+          {showSystemMem && (
+            <div className="rounded-xl border border-[var(--color-accent-green)]/30 bg-[var(--color-accent-green)]/5 p-4">
+              <div className="text-xs text-[var(--color-text-secondary)] mb-1">整机可用内存</div>
+              <div className="text-2xl font-mono font-bold text-[var(--color-accent-green)]">
+                {summary.memAvailableMb}
+                <span className="text-sm font-normal text-[var(--color-text-secondary)] ml-1">MB</span>
+              </div>
+              <div className="text-xs text-[var(--color-text-secondary)] mt-1">MemAvailable</div>
+            </div>
+          )}
         </div>
 
         {/* Trend chart */}
