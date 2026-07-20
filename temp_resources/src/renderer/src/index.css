@@ -1,0 +1,11 @@
+/* 全局重置：消除 body 默认 8px margin，建立 html→body→#root→.ant-app 的 100% 高度链。
+   App 根 div 用 height:100% 填满视口，body 永不出现滚动条 → 顶部标题栏固定不随页面滚动。
+   .ant-app 是 Antd <App> 组件渲染的包裹层（App.tsx 根 div 的直接父级），必须纳入高度链，
+   否则 100vh 的根 div 会撑出 body 滚动条，滚动时把标题栏一起卷走。 */
+html,
+body,
+#root,
+.ant-app {
+  margin: 0;
+  height: 100%;
+}

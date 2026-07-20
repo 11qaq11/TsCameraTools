@@ -14,6 +14,8 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
   const xtermRef = useRef<InstanceType<typeof import('@xterm/xterm').Terminal> | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const resizeObsRef = useRef<ResizeObserver | null>(null)
+  const intersectionObsRef = useRef<IntersectionObserver | null>(null)
+  const visibilityHandlerRef = useRef<(() => void) | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'disconnected'>('loading')
   const [errorMsg, setErrorMsg] = useState('')
   const connecting = useRef(false)
@@ -23,6 +25,14 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
     if (resizeObsRef.current) {
       resizeObsRef.current.disconnect()
       resizeObsRef.current = null
+    }
+    if (intersectionObsRef.current) {
+      intersectionObsRef.current.disconnect()
+      intersectionObsRef.current = null
+    }
+    if (visibilityHandlerRef.current) {
+      document.removeEventListener('visibilitychange', visibilityHandlerRef.current)
+      visibilityHandlerRef.current = null
     }
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
@@ -122,6 +132,11 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
             case 'ready':
               logger.info('XtermTerminal', `Session ready: pid=${msg.pid}`)
               break
+            case 'error':
+              logger.error('XtermTerminal', `Terminal error: ${msg.message}`)
+              setErrorMsg(msg.message || 'Terminal error')
+              setStatus('error')
+              break
           }
         } catch {
           // Raw data
@@ -157,11 +172,13 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
         }
       })
 
-      // Resize handler
+      // Resize handler - only fit when container has size (not hidden)
       const resizeObs = new ResizeObserver(() => {
-        fitAddon.fit()
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
+        if (termRef.current && termRef.current?.offsetHeight > 0 && termRef.current?.offsetWidth > 0) {
+          fitAddon.fit()
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
+          }
         }
       })
       if (termRef.current) {
@@ -188,6 +205,38 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
 
       // Store refs for cleanup
       resizeObsRef.current = resizeObs
+
+      // Re-fit when page becomes visible (handles CSS hidden/show transitions)
+      const handleVisibilityChange = () => {
+        if (!document.hidden && termRef.current && termRef.current?.offsetHeight > 0) {
+          setTimeout(() => {
+            fitAddon.fit()
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
+            }
+          }, 50)
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      visibilityHandlerRef.current = handleVisibilityChange
+
+      // Also re-fit when parent container might have changed visibility
+      const intersectionObs = new IntersectionObserver((entries) => {
+        const el = termRef.current
+        if (entries[0]?.isIntersecting && el && el.offsetHeight > 0) {
+          setTimeout(() => {
+            fitAddon.fit()
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }))
+            }
+          }, 50)
+        }
+      }, { threshold: 0.1 })
+      if (termRef.current) {
+        intersectionObs.observe(termRef.current)
+      }
+      intersectionObsRef.current = intersectionObs
+
       connecting.current = false
     } catch (err) {
       logger.error('XtermTerminal', 'Init failed', err)
@@ -256,7 +305,9 @@ export default function XtermTerminal({ type, serial, onClose }: XtermTerminalPr
           {errorMsg}
         </div>
       )}
-      <div ref={termRef} className="flex-1 p-3 bg-[var(--color-background)]" />
+      <div className="flex-1 p-3 overflow-hidden">
+        <div ref={termRef} className="w-full h-full bg-[var(--color-background)]" />
+      </div>
       {(status === 'disconnected' || status === 'error') && (
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-background)]/80 backdrop-blur-sm z-10">
           <div className="flex flex-col items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] p-6 shadow-lg">

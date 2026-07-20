@@ -1,14 +1,28 @@
-import { spawn, type IPty } from 'node-pty'
 import { WebSocketServer, WebSocket } from 'ws'
 import type { Server } from 'http'
 import { config } from '../config.js'
 import { logger } from '../utils/logger.js'
 
+// Lazy load node-pty to handle ConPTY initialization errors gracefully
+let nodePty: typeof import('node-pty') | null = null
+let ptyLoadError: string | null = null
+
+async function loadNodePty() {
+  if (nodePty || ptyLoadError) return
+  try {
+    nodePty = await import('node-pty')
+    logger.info('node-pty loaded successfully')
+  } catch (err) {
+    ptyLoadError = (err as Error).message
+    logger.error({ error: ptyLoadError }, 'Failed to load node-pty')
+  }
+}
+
 const log = logger.child({ module: 'terminal' })
 
 interface TerminalSession {
   id: string
-  pty: IPty
+  pty: import('node-pty').IPty
   ws: WebSocket
   serial?: string
   type: 'adb' | 'local'
@@ -29,7 +43,7 @@ export function setupTerminalWss(server: Server) {
     // Don't destroy socket here - let Socket.io handle its own upgrades
   })
 
-  wss.on('connection', (ws, request) => {
+  wss.on('connection', async (ws, request) => {
     const url = new URL(request.url || '', `http://${request.headers.host}`)
     const type = (url.searchParams.get('type') || 'local') as 'adb' | 'local'
     const serial = url.searchParams.get('serial') || undefined
@@ -37,12 +51,23 @@ export function setupTerminalWss(server: Server) {
 
     log.info({ sessionId, type, serial }, 'WebSocket connection')
 
-    let pty: IPty
+    // Ensure node-pty is loaded
+    await loadNodePty()
+
+    if (!nodePty) {
+      const errMsg = ptyLoadError || 'node-pty not available'
+      log.error({ sessionId, error: errMsg }, 'Cannot spawn PTY')
+      ws.send(JSON.stringify({ type: 'error', message: `Terminal unavailable: ${errMsg}` }))
+      ws.close(1011, 'Terminal module failed to load')
+      return
+    }
+
+    let pty: import('node-pty').IPty
     try {
       if (type === 'adb' && serial) {
         const adbPath = config.adb.path
         log.info({ sessionId, adbPath, serial }, 'Spawning ADB shell')
-        pty = spawn(adbPath, ['-s', serial, 'shell'], {
+        pty = nodePty.spawn(adbPath, ['-s', serial, 'shell'], {
           name: 'xterm-256color',
           cols: 80,
           rows: 30,
@@ -52,7 +77,7 @@ export function setupTerminalWss(server: Server) {
         const shell = process.platform === 'win32' ? 'powershell.exe' : 'bash'
         const cwd = process.env.USERPROFILE || process.env.HOME || '.'
         log.info({ sessionId, shell, cwd }, 'Spawning local shell')
-        pty = spawn(shell, ['-NoLogo'], {
+        pty = nodePty.spawn(shell, ['-NoLogo'], {
           name: 'xterm-256color',
           cols: 80,
           rows: 30,
@@ -62,6 +87,7 @@ export function setupTerminalWss(server: Server) {
       }
     } catch (err) {
       log.error({ error: (err as Error).message, type, serial }, 'Failed to spawn PTY')
+      ws.send(JSON.stringify({ type: 'error', message: `Failed to spawn terminal: ${(err as Error).message}` }))
       ws.close(1011, 'Failed to spawn terminal')
       return
     }
@@ -80,8 +106,10 @@ export function setupTerminalWss(server: Server) {
 
     pty.onExit(({ exitCode, signal }) => {
       log.info({ sessionId, exitCode, signal }, 'PTY exited')
-      ws.send(JSON.stringify({ type: 'exit', exitCode, signal }))
-      ws.close(1000, 'Terminal exited')
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'exit', exitCode, signal }))
+        ws.close(1000, 'Terminal exited')
+      }
       sessions.delete(sessionId)
     })
 
@@ -91,20 +119,24 @@ export function setupTerminalWss(server: Server) {
         const msg = JSON.parse(raw.toString())
         switch (msg.type) {
           case 'input':
-            pty.write(msg.data)
+            try { pty.write(msg.data) } catch (e) {
+              log.warn({ sessionId, error: (e as Error).message }, 'PTY write failed')
+            }
             break
           case 'resize':
             if (msg.cols && msg.rows) {
-              pty.resize(msg.cols, msg.rows)
+              try { pty.resize(msg.cols, msg.rows) } catch (e) {
+                log.warn({ sessionId, error: (e as Error).message }, 'PTY resize failed')
+              }
             }
             break
           case 'kill':
-            pty.kill()
+            try { pty.kill() } catch {}
             break
         }
       } catch {
         // Binary data - write directly
-        pty.write(raw.toString())
+        try { pty.write(raw.toString()) } catch {}
       }
     })
 

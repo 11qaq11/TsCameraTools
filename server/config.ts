@@ -7,9 +7,12 @@ dotenv.config()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// 项目根目录：开发模式下是 server/ 的父目录，编译后是 dist/ 的父目录
+const projectRoot = path.resolve(__dirname, '..')
+
 function resolveAdbPath(): string {
   // 1. 优先使用项目内置的 ADB
-  const bundled = path.resolve(__dirname, '../bin/platform-tools/adb.exe')
+  const bundled = path.join(projectRoot, 'bin', 'platform-tools', 'adb.exe')
   if (fs.existsSync(bundled)) return bundled
   // 2. 使用 .env 配置的路径
   const configured = process.env.ADB_PATH

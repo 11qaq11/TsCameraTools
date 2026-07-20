@@ -1,0 +1,12 @@
+node_modules/
+out/
+release/
+release-new/
+release-nsis/
+dist/
+*.log
+*.tsbuildinfo
+# 本地诊断 trace（Ctrl+Shift+T contentTracing 录制 / DevTools 导出，单个可达数十 MB，不入库）
+[Tt]race-*.json*
+.DS_Store
+Thumbs.db

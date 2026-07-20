@@ -21,6 +21,11 @@ const __dirname = path.dirname(__filename)
 
 // Global crash handlers
 process.on('uncaughtException', (err) => {
+  // Suppress node-pty AttachConsole errors on Windows (known issue with Node.js v24)
+  if (err.message?.includes('AttachConsole')) {
+    logger.warn({ error: err.message }, 'node-pty AttachConsole error (suppressed)')
+    return
+  }
   logger.fatal({ error: err.message, stack: err.stack }, 'UNCAUGHT EXCEPTION')
   process.exit(1)
 })

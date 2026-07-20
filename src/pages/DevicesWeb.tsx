@@ -1,10 +1,13 @@
 // DevicesWeb.tsx - Web 版设备管理页面
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import { RefreshCw, Shield, HardDrive, Terminal, Download, AlertTriangle } from 'lucide-react'
 import { fetchWithAuth } from '../utils/auth'
 import { logger } from '../utils/logger'
 import XtermTerminal from '../components/terminal/XtermTerminal'
+import type { RootState, AppDispatch } from '../store'
+import { saveToolSnapshot } from '../store/reducers/ui'
 
 interface AdbDevice {
   serial: string
@@ -109,12 +112,34 @@ function AdbNotFound({ onInstall, installing }: { onInstall: () => void; install
 }
 
 function DevicesWeb() {
+  const dispatch = useDispatch<AppDispatch>()
+  const toolSnapshots = useSelector((state: RootState) => state.ui.toolSnapshots)
   const [devices, setDevices] = useState<AdbDevice[]>([])
   const [loading, setLoading] = useState(false)
   const [adbAvailable, setAdbAvailable] = useState<boolean | null>(null)
   const [ttydAvailable, setTtydAvailable] = useState<boolean | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
-  const [activeShell, setActiveShell] = useState<{ serial: string } | null>(null)
+  // 从快照恢复 activeShell 状态
+  const [activeShell, setActiveShell] = useState<{ serial: string } | null>(
+    toolSnapshots.devices?.selectedDevice ? { serial: toolSnapshots.devices.selectedDevice } : null
+  )
+
+  // 保存状态快照
+  const saveSnapshot = useCallback(() => {
+    dispatch(saveToolSnapshot({
+      toolId: 'devices',
+      snapshot: {
+        selectedDevice: activeShell?.serial || null
+      }
+    }))
+  }, [dispatch, activeShell])
+
+  // 组件卸载时保存状态
+  useEffect(() => {
+    return () => {
+      saveSnapshot()
+    }
+  }, [saveSnapshot])
 
   useEffect(() => {
     checkAdb()
@@ -164,10 +189,20 @@ function DevicesWeb() {
     setConnecting(serial)
     setActiveShell({ serial })
     setConnecting(null)
+    // 保存连接状态
+    dispatch(saveToolSnapshot({
+      toolId: 'devices',
+      snapshot: { selectedDevice: serial }
+    }))
   }
 
   const handleDisconnect = () => {
     setActiveShell(null)
+    // 清除连接状态
+    dispatch(saveToolSnapshot({
+      toolId: 'devices',
+      snapshot: { selectedDevice: null }
+    }))
   }
 
   if (adbAvailable === null) {

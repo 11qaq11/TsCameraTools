@@ -1,10 +1,21 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
 import logoImg from './headerLogo.png'
 import { navItems } from '../config/navigation'
+import { switchTool } from '../store/reducers/ui'
+import type { AppDispatch } from '../store'
+
+// 路径到工具 ID 的映射
+const pathToToolId: Record<string, string> = {
+  '/': 'devices',
+  '/terminal': 'terminal',
+  '/memory': 'memory',
+}
 
 function Sidebar() {
+  const dispatch = useDispatch<AppDispatch>()
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
 
@@ -36,12 +47,16 @@ function Sidebar() {
           <NavLink
             key={item.id}
             to={item.path}
+            onClick={() => {
+              const toolId = pathToToolId[item.path] || item.id
+              dispatch(switchTool(toolId))
+            }}
             className={() => {
               const isActive = location.pathname === item.path
               return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-[var(--color-sidebar-active)] text-[var(--color-text-sidebar-active)] glow-accent'
-                  : 'text-[var(--color-text-sidebar)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)]'
+                  ? 'bg-[var(--color-sidebar-active)] text-red-600 glow-accent'
+                  : 'text-black hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)]'
               } ${collapsed ? 'justify-center' : ''}`
             }}
             title={collapsed ? item.label : undefined}

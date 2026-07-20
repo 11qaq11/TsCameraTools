@@ -3,9 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import { isAuthenticated } from './utils/auth'
 
-const Devices = lazy(() => import('./pages/DevicesWeb'))
-const LocalTerminal = lazy(() => import('./pages/LocalTerminal'))
-const MemoryAnalysis = lazy(() => import('./pages/MemoryAnalysis'))
 const Login = lazy(() => import('./pages/Login'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 
@@ -30,15 +27,11 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/login/callback" element={<AuthCallback />} />
-        <Route path="/" element={
+        <Route path="/*" element={
           <ProtectedRoute>
             <MainLayout />
           </ProtectedRoute>
-        }>
-          <Route index element={<Devices />} />
-          <Route path="terminal" element={<LocalTerminal />} />
-          <Route path="memory" element={<MemoryAnalysis />} />
-        </Route>
+        } />
       </Routes>
     </Suspense>
   )
