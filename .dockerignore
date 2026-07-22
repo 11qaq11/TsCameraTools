@@ -1,0 +1,14 @@
+node_modules
+dist
+release
+logs
+data
+.git
+.env
+.env.*
+*.md
+.vscode
+specs
+.specify
+certs
+scripts

@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { exec } from 'child_process'
 import { config } from '../config.js'
 import { logger } from '../utils/logger.js'
+import { query } from '../db/index.js'
+import { authMiddleware } from '../middleware/auth.js'
 
 const log = logger.child({ module: 'adb-routes' })
 const router = Router()
@@ -56,9 +58,19 @@ router.get('/devices', (_req, res) => {
 })
 
 // 执行 Root
-router.post('/root/:serial', (req, res) => {
+router.post('/root/:serial', authMiddleware, async (req, res) => {
   const { serial } = req.params
   const adbPath = config.adb.path
+
+  // 记录设备使用历史
+  try {
+    await query(
+      'INSERT INTO device_history (user_id, device_serial) VALUES ($1, $2)',
+      [req.user!.id, serial]
+    )
+  } catch (err) {
+    logger.warn({ error: (err as Error).message }, 'Failed to record device history')
+  }
 
   exec(`"${adbPath}" -s ${serial} root`, (error, stdout, stderr) => {
     if (error) {
@@ -72,9 +84,19 @@ router.post('/root/:serial', (req, res) => {
 })
 
 // 执行 Remount
-router.post('/remount/:serial', (req, res) => {
+router.post('/remount/:serial', authMiddleware, async (req, res) => {
   const { serial } = req.params
   const adbPath = config.adb.path
+
+  // 记录设备使用历史
+  try {
+    await query(
+      'INSERT INTO device_history (user_id, device_serial) VALUES ($1, $2)',
+      [req.user!.id, serial]
+    )
+  } catch (err) {
+    logger.warn({ error: (err as Error).message }, 'Failed to record device history')
+  }
 
   exec(`"${adbPath}" -s ${serial} remount`, (error, stdout, stderr) => {
     if (error) {

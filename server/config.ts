@@ -44,5 +44,15 @@ export const config = {
     portStart: parseInt(process.env.TTYD_PORT_START || '7681'),
     portEnd: parseInt(process.env.TTYD_PORT_END || '7690'),
     credential: process.env.TTYD_CREDENTIAL || 'admin:admin'
+  },
+
+  // 数据库配置
+  database: {
+    url: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/tscameratools'
+  },
+
+  // 会话配置
+  session: {
+    expiryHours: parseInt(process.env.SESSION_EXPIRY_HOURS || '24')
   }
 }

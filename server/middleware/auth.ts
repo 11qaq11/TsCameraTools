@@ -1,0 +1,58 @@
+import { Request, Response, NextFunction } from 'express'
+import { query } from '../db/index.js'
+
+export interface AuthUser {
+  id: number
+  feishu_id: string
+  name: string
+  email: string
+  avatar: string
+  tenant_key: string
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthUser
+    }
+  }
+}
+
+export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authHeader = req.headers.authorization
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Not authenticated' })
+    return
+  }
+
+  const sessionId = authHeader.substring(7)
+
+  try {
+    const { rows } = await query<AuthUser & { session_id: string }>(
+      `SELECT u.id, u.feishu_id, u.name, u.email, u.avatar, u.tenant_key, s.id as session_id
+       FROM sessions s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.id = $1 AND s.expires_at > NOW()`,
+      [sessionId]
+    )
+
+    if (rows.length === 0) {
+      res.status(401).json({ error: 'Invalid or expired session' })
+      return
+    }
+
+    req.user = {
+      id: rows[0].id,
+      feishu_id: rows[0].feishu_id,
+      name: rows[0].name,
+      email: rows[0].email,
+      avatar: rows[0].avatar,
+      tenant_key: rows[0].tenant_key,
+    }
+
+    next()
+  } catch (err) {
+    res.status(500).json({ error: 'Authentication error' })
+  }
+}

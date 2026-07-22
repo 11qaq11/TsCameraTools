@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, waitFor } from '@testing-library/react'
 import AuthCallback from './AuthCallback'
+
+const mockMeApi = vi.fn()
+global.fetch = vi.fn()
 
 vi.mock('../utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -10,6 +13,7 @@ describe('AuthCallback', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    vi.mocked(fetch).mockImplementation(mockMeApi)
   })
 
   const withHash = (hash: string) => {
@@ -20,8 +24,10 @@ describe('AuthCallback', () => {
   }
 
   it('有 token 时存储到 localStorage', () => {
-    const user = { id: '1', name: 'Test', email: 't@t.com', avatar: '', tenantKey: 'k' }
-    const token = btoa(JSON.stringify(user))
+    mockMeApi.mockResolvedValue({
+      json: () => Promise.resolve({ user: { id: 1, name: 'Test', email: 't@t.com', avatar: '', tenant_key: '' } })
+    })
+    const token = 'test-uuid-session-id'
     withHash(`#/login/callback?token=${token}`)
 
     render(<AuthCallback />)
@@ -44,16 +50,27 @@ describe('AuthCallback', () => {
     expect(getByText('正在完成登录...')).toBeInTheDocument()
   })
 
-  it('有效 token 时解析 user_info 并存储', () => {
-    const user = { id: '1', name: 'Test', email: 't@t.com' }
-    const token = btoa(JSON.stringify(user))
+  it('有效 token 时通过 API 获取 user_info 并存储', async () => {
+    const token = 'test-uuid-session-id'
     withHash(`#/login/callback?token=${token}`)
+
+    mockMeApi.mockResolvedValue({
+      json: () => Promise.resolve({ user: { id: 1, name: 'Test', email: 't@t.com', avatar: '', tenant_key: '' } })
+    })
 
     render(<AuthCallback />)
 
-    const stored = localStorage.getItem('user_info')
-    expect(stored).not.toBeNull()
-    expect(JSON.parse(stored!).id).toBe('1')
-    expect(JSON.parse(stored!).name).toBe('Test')
+    await waitFor(() => {
+      const stored = localStorage.getItem('user_info')
+      expect(stored).not.toBeNull()
+      if (stored) {
+        expect(JSON.parse(stored).id).toBe(1)
+        expect(JSON.parse(stored).name).toBe('Test')
+      }
+    })
+
+    expect(mockMeApi).toHaveBeenCalledWith('/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
   })
 })

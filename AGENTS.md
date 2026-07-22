@@ -51,7 +51,9 @@ src/types/index.ts     → ElectronAPI 类型定义
 ### 后端（server/）
 - 入口：`server/index.ts`
 - 配置：`server/config.ts`（读取 .env）
-- 路由：`server/routes/{auth,adb,logs,ttyd,debug}.ts`
+- 路由：`server/routes/{auth,adb,logs,ttyd,debug,user}.ts`
+- 数据库：`server/db/`（PostgreSQL 连接池 + 迁移）
+- 认证中间件：`server/middleware/auth.ts`
 - 终端服务：`server/services/terminal.ts`（node-pty + WebSocket）
 - 日志：pino → `logs/server.log`
 
@@ -118,7 +120,28 @@ FEISHU_APP_ID / FEISHU_APP_SECRET  # 飞书 OAuth
 ADB_PATH                           # ADB 路径（Windows 需完整路径）
 TTYD_PORT_START/END                # 终端端口范围
 TTYD_CREDENTIAL                    # 终端认证
+DATABASE_URL                       # PostgreSQL 连接字符串
+DB_PASSWORD                        # 数据库密码
+SESSION_EXPIRY_HOURS               # 会话过期时间（小时）
 ```
+
+---
+
+## Docker 部署
+
+```bash
+# 构建并启动（app + PostgreSQL + Nginx）
+docker-compose build
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f app
+
+# 停止服务
+docker-compose down
+```
+
+详细部署文档见 `DEPLOY.md`。
 
 ---
 

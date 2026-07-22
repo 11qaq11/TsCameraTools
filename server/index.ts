@@ -7,6 +7,8 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { logger } from './utils/logger.js'
+import { runMigrations } from './db/migrations.js'
+import { closePool } from './db/index.js'
 import { setupTerminalWss } from './services/terminal.js'
 import { setupMemoryWss } from './services/memory-ws.js'
 import authRoutes from './routes/auth.js'
@@ -15,6 +17,7 @@ import logRoutes from './routes/logs.js'
 import ttydRoutes from './routes/ttyd.js'
 import debugRoutes from './routes/debug.js'
 import memoryRoutes from './routes/memory.js'
+import userRoutes from './routes/user.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,10 +52,23 @@ app.use('/api/logs', logRoutes)
 app.use('/api/ttyd', ttydRoutes)
 app.use('/api/debug', debugRoutes)
 app.use('/api/memory', memoryRoutes)
+app.use('/api/user', userRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })
 })
+
+// 生产模式：托管前端静态文件
+if (process.env.NODE_ENV === 'production') {
+  const staticPath = path.join(__dirname, '..', 'dist')
+  if (fs.existsSync(staticPath)) {
+    app.use(express.static(staticPath))
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(staticPath, 'index.html'))
+    })
+    logger.info({ path: staticPath }, 'Serving frontend static files')
+  }
+}
 
 // Express global error middleware
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -61,7 +77,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 const useHttps = process.env.HTTPS === 'true'
-let server
+let server: ReturnType<typeof createHttpServer>
 
 if (useHttps) {
   try {
@@ -94,10 +110,37 @@ io.on('connection', (socket) => {
   })
 })
 
-server.listen(PORT, () => {
-  logger.info({ port: PORT, https: useHttps }, `Server started`)
-  setupTerminalWss(server)
-  setupMemoryWss(server)
+// 初始化数据库并启动服务器
+async function startServer() {
+  try {
+    // 运行数据库迁移
+    await runMigrations()
+    logger.info('Database migrations completed')
+  } catch (err) {
+    logger.fatal({ error: (err as Error).message }, 'Database initialization failed')
+    process.exit(1)
+  }
+
+  server.listen(PORT, () => {
+    logger.info({ port: PORT, https: useHttps }, `Server started`)
+    setupTerminalWss(server)
+    setupMemoryWss(server)
+  })
+}
+
+startServer()
+
+// 优雅关闭
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully')
+  await closePool()
+  process.exit(0)
+})
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully')
+  await closePool()
+  process.exit(0)
 })
 
 server.on('error', (err) => {

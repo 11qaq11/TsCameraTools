@@ -1,49 +1,37 @@
 import { Router } from 'express'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { randomUUID } from 'crypto'
 import { config } from '../config.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { query } from '../db/index.js'
+import { authMiddleware } from '../middleware/auth.js'
+import { logger } from '../utils/logger.js'
 
 const router = Router()
-
-function logToFile(msg: string) {
-  const logDir = path.join(__dirname, '..', '..', 'logs')
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
-  const logFile = path.join(logDir, 'auth.log')
-  fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`)
-}
 
 // 生成飞书登录链接
 router.get('/feishu/login', (req, res) => {
   const { appId, redirectUri } = config.feishu
   const state = Math.random().toString(36).substring(7)
-  
+
   const authUrl = `https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`
-  
+
   res.json({ authUrl, state })
 })
 
 // 飞书 OAuth 回调
 router.get('/feishu/callback', async (req, res) => {
   const { code, state } = req.query
-  
-  logToFile(`Callback called with code=${code}, state=${state}`)
-  
+
+  logger.info({ code, state }, 'Feishu OAuth callback')
+
   if (!code) {
     return res.status(400).json({ error: 'Missing authorization code' })
   }
 
   try {
     // 1. 获取 app_access_token
-    logToFile('Getting app_access_token...')
     const appToken = await getAppAccessToken()
-    logToFile(`Got app_access_token: ${appToken.substring(0, 10)}...`)
-    
+
     // 2. 用 code 换取 user access token
-    logToFile('Exchanging code for access token...')
     const tokenResponse = await fetch('https://open.feishu.cn/open-apis/authen/v1/oidc/access_token', {
       method: 'POST',
       headers: {
@@ -57,21 +45,19 @@ router.get('/feishu/callback', async (req, res) => {
     })
 
     const tokenData = await tokenResponse.json() as Record<string, unknown>
-    logToFile(`Token response: ${JSON.stringify(tokenData)}`)
 
     if (tokenData.code !== 0) {
-      logToFile(`Token error: ${JSON.stringify(tokenData)}`)
+      logger.error({ tokenData }, 'Token exchange error')
       return res.redirect(`${config.frontendUrl}/login`)
     }
 
     const accessToken = (tokenData.data as Record<string, unknown>)?.access_token as string
     if (!accessToken) {
-      logToFile(`No access_token in response: ${JSON.stringify(tokenData)}`)
+      logger.error({ tokenData }, 'No access_token in response')
       return res.redirect(`${config.frontendUrl}/login`)
     }
 
     // 3. 获取用户信息
-    logToFile('Getting user info...')
     const userResponse = await fetch('https://open.feishu.cn/open-apis/authen/v1/user_info', {
       headers: {
         'Authorization': `Bearer ${accessToken}`
@@ -79,65 +65,84 @@ router.get('/feishu/callback', async (req, res) => {
     })
 
     const userData = await userResponse.json() as Record<string, unknown>
-    logToFile(`User response: ${JSON.stringify(userData)}`)
 
     if (userData.code !== 0) {
-      logToFile(`User info error: ${JSON.stringify(userData)}`)
+      logger.error({ userData }, 'User info error')
       return res.redirect(`${config.frontendUrl}/login`)
     }
 
     const data = userData.data as Record<string, unknown>
-    
-    const user = {
-      id: String(data.open_id || data.user_id || data.union_id || ''),
-      name: String(data.name || ''),
-      email: String(data.email || ''),
-      avatar: String(data.avatar_url || (data.avatar as Record<string, unknown>)?.avatar_72 || data.avatar_thumb || ''),
-      tenantKey: String(data.tenant_key || '')
-    }
 
-    logToFile(`User parsed: ${JSON.stringify(user)}`)
+    const feishuId = String(data.open_id || data.user_id || data.union_id || '')
+    const name = String(data.name || '')
+    const email = String(data.email || '')
+    const avatar = String(data.avatar_url || (data.avatar as Record<string, unknown>)?.avatar_72 || data.avatar_thumb || '')
+    const tenantKey = String(data.tenant_key || '')
 
-    // 4. 生成 token (Base64 编码)
-    const jwtToken = Buffer.from(JSON.stringify(user)).toString('base64')
+    logger.info({ feishuId, name, tenantKey }, 'User authenticated')
 
-    // 5. 重定向到前端，token 通过 URL 传递（使用 HashRouter 格式）
-    const redirectUrl = `${config.frontendUrl}/#/login/callback?token=${encodeURIComponent(jwtToken)}`
-    logToFile(`Redirecting to frontend: ${config.frontendUrl}/#/login/callback?token=...`)
+    // 4. UPSERT 用户记录
+    const { rows: userRows } = await query<{ id: number }>(
+      `INSERT INTO users (feishu_id, name, email, avatar, tenant_key, last_login_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (feishu_id) DO UPDATE SET
+         name = EXCLUDED.name,
+         email = EXCLUDED.email,
+         avatar = EXCLUDED.avatar,
+         tenant_key = EXCLUDED.tenant_key,
+         last_login_at = NOW()
+       RETURNING id`,
+      [feishuId, name, email, avatar, tenantKey]
+    )
+
+    const userId = userRows[0].id
+
+    // 5. 创建 session
+    const sessionId = randomUUID()
+    const expiryHours = config.session.expiryHours
+
+    await query(
+      `INSERT INTO sessions (id, user_id, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '${expiryHours} hours')`,
+      [sessionId, userId]
+    )
+
+    logger.info({ userId, sessionId }, 'Session created')
+
+    // 6. 重定向到前端
+    const redirectUrl = `${config.frontendUrl}/#/login/callback?token=${encodeURIComponent(sessionId)}`
     res.redirect(302, redirectUrl)
   } catch (error) {
-    logToFile(`Exception: ${error instanceof Error ? error.stack : String(error)}`)
-    console.error('Feishu OAuth error:', error)
+    logger.error({ error: (error as Error).message, stack: (error as Error).stack }, 'Feishu OAuth error')
     res.redirect(`${config.frontendUrl}/login`)
   }
 })
 
 // 获取当前用户信息
-router.get('/me', (req, res) => {
-  const authHeader = req.headers.authorization
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Not authenticated' })
-  }
-
-  try {
-    const token = authHeader.substring(7)
-    const user = JSON.parse(Buffer.from(token, 'base64').toString())
-    res.json({ user })
-  } catch {
-    res.status(401).json({ error: 'Invalid token' })
-  }
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user })
 })
 
 // 登出
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  const authHeader = req.headers.authorization
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const sessionId = authHeader.substring(7)
+    try {
+      await query('DELETE FROM sessions WHERE id = $1', [sessionId])
+    } catch (err) {
+      logger.error({ error: (err as Error).message }, 'Logout error')
+    }
+  }
+
   res.json({ success: true })
 })
 
 // 获取 app_access_token
 async function getAppAccessToken(): Promise<string> {
   const { appId, appSecret } = config.feishu
-  
+
   const response = await fetch('https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal', {
     method: 'POST',
     headers: {
@@ -155,11 +160,11 @@ async function getAppAccessToken(): Promise<string> {
     app_access_token: string
     expire: number
   }
-  
+
   if (data.code !== 0) {
     throw new Error(`Failed to get app_access_token: ${data.msg}`)
   }
-  
+
   return data.app_access_token
 }
 
