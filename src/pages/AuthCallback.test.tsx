@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/react'
 import AuthCallback from './AuthCallback'
 
 const mockMeApi = vi.fn()
-global.fetch = vi.fn()
+vi.stubGlobal('fetch', mockMeApi)
 
 vi.mock('../utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -13,7 +13,6 @@ describe('AuthCallback', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    vi.mocked(fetch).mockImplementation(mockMeApi)
   })
 
   const withHash = (hash: string) => {
