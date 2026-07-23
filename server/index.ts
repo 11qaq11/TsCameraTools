@@ -60,8 +60,8 @@ app.get('/health', (_req, res) => {
 
 // 生产模式：托管前端静态文件
 if (process.env.NODE_ENV === 'production') {
-  const staticPath = path.join(__dirname, '..', 'dist')
-  if (fs.existsSync(staticPath)) {
+  const staticPath = path.join(__dirname, '..')
+  if (fs.existsSync(path.join(staticPath, 'index.html'))) {
     app.use(express.static(staticPath))
     app.get('*', (_req, res) => {
       res.sendFile(path.join(staticPath, 'index.html'))
