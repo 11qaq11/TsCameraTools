@@ -1,29 +1,24 @@
 # ---- Stage 1: Build ----
 FROM node:22-alpine AS builder
-RUN apk add --no-cache python3 make g++
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm config set registry https://registry.npmmirror.com && npm ci --legacy-peer-deps --ignore-scripts
 COPY . .
 RUN npm run web:build
 
 # ---- Stage 2: Production ----
 FROM node:22-alpine
-RUN apk add --no-cache python3 make g++ libc6-compat
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+ && apk add --no-cache libc6-compat
 WORKDIR /app
+
+ENV NODE_ENV=production
 
 # Copy build artifacts
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev --legacy-peer-deps
-
-# Clean up build tools to reduce image size
-RUN apk del python3 make g++
-
-# Copy Linux binaries (uncomment when binaries are available)
-# COPY bin/ttyd/ttyd-linux /usr/local/bin/ttyd
-# COPY bin/platform-tools-linux/ /usr/local/bin/platform-tools/
-# RUN chmod +x /usr/local/bin/ttyd /usr/local/bin/platform-tools/adb
+RUN npm config set registry https://registry.npmmirror.com && npm ci --omit=dev --legacy-peer-deps --ignore-scripts
 
 # Copy migration scripts
 COPY server/db/migrations ./dist/server/db/migrations
