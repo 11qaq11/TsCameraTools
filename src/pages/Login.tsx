@@ -5,6 +5,8 @@ import { logger } from '../utils/logger'
 import { LogViewer } from '../components/LogViewer'
 import logoImg from '../components/headerLogo.png'
 
+const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+
 function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -13,7 +15,16 @@ function Login() {
   useEffect(() => {
     logger.info('Login', '=== Component mounted ===')
     const token = localStorage.getItem('auth_token')
-    logger.info('Login', `Existing token: ${token ? 'YES' : 'NO'}`)
+
+    // Electron 模式：不依赖后端 server，直接创建调试 token 进入应用
+    if (isElectron && !token) {
+      logger.info('Login', 'Electron mode: auto-authenticating')
+      localStorage.setItem('auth_token', 'electron-debug-token')
+      localStorage.setItem('user_info', JSON.stringify({ id: 'electron', name: '本地用户', email: '', avatar: '', tenantKey: '' }))
+      navigate('/')
+      return
+    }
+
     if (token) {
       logger.info('Login', 'Already authenticated, redirecting to /')
       navigate('/')

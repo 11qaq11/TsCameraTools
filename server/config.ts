@@ -54,5 +54,8 @@ export const config = {
   // 会话配置
   session: {
     expiryHours: parseInt(process.env.SESSION_EXPIRY_HOURS || '24')
-  }
+  },
+
+  // 开发调试
+  authDebug: process.env.AUTH_DEBUG === 'true'
 }

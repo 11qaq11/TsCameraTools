@@ -35,8 +35,13 @@ export interface ElectronAPI {
   adbShellKill: (id: string) => void
   adbShellFlushStdin: (id: string) => void
   adbShellReconnect: (serial: string, oldId: string) => Promise<string | null>
-  onShellData: (callback: (id: string, data: string) => void) => void
-  onShellExit: (callback: (id: string) => void) => void
+  onShellData: (type: 'adb' | 'local', callback: (id: string, data: string) => void) => void
+  onShellExit: (type: 'adb' | 'local', callback: (id: string) => void) => void
+  localShellStart: () => Promise<string | null>
+  localShellWrite: (id: string, data: string) => void
+  localShellKill: (id: string) => void
+  localShellFlushStdin: (id: string) => void
+  localShellReconnect: (oldId: string) => Promise<string | null>
   loadHistory: () => Promise<HistoryResult>
   saveHistory: (history: string[]) => Promise<AdbResult>
   writeLog: (message: string) => Promise<AdbResult>

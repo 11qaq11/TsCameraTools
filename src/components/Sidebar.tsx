@@ -1,23 +1,35 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
 import { useState } from 'react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import logoImg from './headerLogo.png'
 import { navItems } from '../config/navigation'
-import { switchTool } from '../store/reducers/ui'
-import type { AppDispatch } from '../store'
+import { adminNavItems } from '../config/adminNav'
+import { switchTool, toggleTool } from '../store/reducers/ui'
+import type { RootState, AppDispatch } from '../store'
 
-// 路径到工具 ID 的映射
-const pathToToolId: Record<string, string> = {
+const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+const allItems = isElectron ? navItems : adminNavItems
+
+const pathToToolId: Record<string, string> = isElectron ? {
   '/': 'devices',
-  '/terminal': 'terminal',
   '/memory': 'memory',
+} : {
+  '/admin/users': 'admin-users',
+  '/admin/logs': 'admin-logs',
+  '/admin/config': 'admin-config',
 }
 
 function Sidebar() {
   const dispatch = useDispatch<AppDispatch>()
+  const enabledTools = useSelector((state: RootState) => state.ui.enabledTools)
   const [collapsed, setCollapsed] = useState(false)
+  const [showMarket, setShowMarket] = useState(false)
   const location = useLocation()
+
+  const visibleItems = isElectron
+    ? allItems.filter(item => enabledTools.includes(item.id))
+    : allItems
 
   return (
     <aside
@@ -30,7 +42,7 @@ function Sidebar() {
           <div className="flex items-center gap-2">
             <img src={logoImg} alt="ThunderSoft" className="h-6 w-auto" />
             <h1 className="text-sm font-bold text-[var(--color-text-primary)] font-mono tracking-wider truncate">
-              TsCameraTools
+              TsCameraTools{isElectron ? '' : ' Admin'}
             </h1>
           </div>
         )}
@@ -43,7 +55,7 @@ function Sidebar() {
       </div>
 
       <nav className="mt-2 flex-1 space-y-1 px-2">
-        {navItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink
             key={item.id}
             to={item.path}
@@ -66,6 +78,37 @@ function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {isElectron && (
+        <div className="border-t border-[var(--color-border)]">
+          {!collapsed && (
+            <div className="p-2">
+              <button
+                onClick={() => setShowMarket(!showMarket)}
+                className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] cursor-pointer rounded hover:bg-[var(--color-sidebar-hover)]"
+              >
+                <Settings2 size={14} />
+                <span>工具市场</span>
+              </button>
+              {showMarket && (
+                <div className="mt-1 space-y-0.5 px-1">
+                  {navItems.map(item => (
+                    <label key={item.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[var(--color-sidebar-hover)] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enabledTools.includes(item.id)}
+                        onChange={() => dispatch(toggleTool(item.id))}
+                        className="w-3.5 h-3.5 accent-[var(--color-accent-green)]"
+                      />
+                      <span className="text-xs text-[var(--color-text-secondary)]">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="border-t border-[var(--color-border)] p-4">
         {!collapsed && (

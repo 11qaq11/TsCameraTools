@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { query } from '../db/index.js'
+import { config } from '../config.js'
 
 export interface AuthUser {
   id: number
@@ -19,6 +20,11 @@ declare global {
 }
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (config.authDebug) {
+    req.user = { id: 1, feishu_id: 'debug', name: '调试用户', email: 'debug@local', avatar: '', tenant_key: 'debug' }
+    return next()
+  }
+
   const authHeader = req.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

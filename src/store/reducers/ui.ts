@@ -20,9 +20,12 @@ interface UiState {
   activeTool: string
   // 各工具的状态快照
   toolSnapshots: Record<string, ToolSnapshot>
+  // 已启用的工具 ID 列表（工具市场）
+  enabledTools: string[]
 }
 
 const MAX_RECENT_TOOLS = 5
+const ALL_TOOL_IDS = ['devices', 'memory']
 
 const initialState: UiState = {
   fontSize: 14,
@@ -32,6 +35,7 @@ const initialState: UiState = {
   recentTools: ['devices'],
   activeTool: 'devices',
   toolSnapshots: {},
+  enabledTools: ALL_TOOL_IDS,
 }
 
 const uiSlice = createSlice({
@@ -74,6 +78,15 @@ const uiSlice = createSlice({
     clearToolSnapshot: (state, action: PayloadAction<string>) => {
       delete state.toolSnapshots[action.payload]
     },
+    // 切换工具启用状态
+    toggleTool: (state, action: PayloadAction<string>) => {
+      const toolId = action.payload
+      if (state.enabledTools.includes(toolId)) {
+        state.enabledTools = state.enabledTools.filter(id => id !== toolId)
+      } else {
+        state.enabledTools = [...state.enabledTools, toolId]
+      }
+    },
   },
 })
 
@@ -87,6 +100,7 @@ export const {
   switchTool,
   saveToolSnapshot,
   clearToolSnapshot,
+  toggleTool,
 } = uiSlice.actions
 
 export default uiSlice.reducer

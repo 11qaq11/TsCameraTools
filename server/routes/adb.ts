@@ -8,6 +8,15 @@ import { authMiddleware } from '../middleware/auth.js'
 const log = logger.child({ module: 'adb-routes' })
 const router = Router()
 
+// ADB 下载链接
+router.get('/download', (_req, res) => {
+  res.json({
+    windows: 'https://dl.google.com/android/repository/platform-tools-latest-windows.zip',
+    mac: 'https://dl.google.com/android/repository/platform-tools-latest-darwin.zip',
+    linux: 'https://dl.google.com/android/repository/platform-tools-latest-linux.zip',
+  })
+})
+
 // 检测 ADB 可用性
 router.get('/check', (_req, res) => {
   const adbPath = config.adb.path

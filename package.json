@@ -85,6 +85,7 @@
   "build": {
     "appId": "com.thundersoft.tscameratools",
     "productName": "TsCameraTools",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },

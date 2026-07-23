@@ -322,6 +322,96 @@ ipcMain.handle('adb:shell:reconnect', async (_event, serial, oldId) => {
   return id
 })
 
+// Local shell: spawn cmd.exe
+ipcMain.handle('local:shell:start', async () => {
+  const id = `local-${Date.now()}`
+  log.info(`Starting local shell: ${id}`)
+
+  const proc = spawn('cmd.exe', [], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: false,
+  })
+  shells.set(id, proc)
+
+  proc.stdout.setEncoding('utf-8')
+  proc.stderr.setEncoding('utf-8')
+
+  proc.stdout.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('local:shell:data', id, data)
+    }
+  })
+  proc.stderr.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('local:shell:data', id, data)
+    }
+  })
+  proc.on('error', (err) => {
+    log.error(`Local shell error ${id}: ${err.message}`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('local:shell:data', id, `\r\n\x1b[31mError: ${err.message}\x1b[0m\r\n`)
+    }
+  })
+  proc.on('close', (code) => {
+    log.info(`Local shell closed ${id} with code ${code}`)
+    shells.delete(id)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('local:shell:exit', id)
+    }
+  })
+
+  proc.stdin.write('\n')
+  return id
+})
+
+ipcMain.on('local:shell:write', (_event, id, data) => {
+  const proc = shells.get(id)
+  if (proc && proc.stdin && !proc.stdin.destroyed) {
+    try { proc.stdin.write(data.replace(/\r/g, '\n')) } catch {}
+  }
+})
+
+ipcMain.on('local:shell:kill', (_event, id) => {
+  const proc = shells.get(id)
+  if (proc) {
+    try { proc.kill() } catch {}
+    shells.delete(id)
+  }
+})
+
+ipcMain.on('local:shell:flush-stdin', (_event, id) => {
+  const proc = shells.get(id)
+  if (proc && proc.stdin && !proc.stdin.destroyed) {
+    try { proc.stdin.write('\x03\n') } catch {}
+  }
+})
+
+// Local shell: reconnect
+ipcMain.handle('local:shell:reconnect', async (_event, oldId) => {
+  const oldProc = shells.get(oldId)
+  if (oldProc) {
+    oldProc.kill()
+    shells.delete(oldId)
+  }
+  const id = `local-${Date.now()}`
+  const proc = spawn('cmd.exe', [], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: false })
+  shells.set(id, proc)
+  proc.stdout.setEncoding('utf-8')
+  proc.stderr.setEncoding('utf-8')
+  proc.stdout.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('local:shell:data', id, data)
+  })
+  proc.stderr.on('data', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('local:shell:data', id, data)
+  })
+  proc.on('close', (code) => {
+    shells.delete(id)
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('local:shell:exit', id)
+  })
+  proc.stdin.write('\n')
+  return id
+})
+
 // History: load from file
 ipcMain.handle('history:load', async () => {
   const historyPath = path.join(process.cwd(), '.adb-command-history.json')

@@ -11,16 +11,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   adbShellKill: (id) => ipcRenderer.send('adb:shell:kill', id),
   adbShellFlushStdin: (id) => ipcRenderer.send('adb:shell:flush-stdin', id),
   adbShellReconnect: (serial, oldId) => ipcRenderer.invoke('adb:shell:reconnect', serial, oldId),
-  onShellData: (callback) => {
+  onShellData: (type, callback) => {
+    const channel = type === 'adb' ? 'adb:shell:data' : 'local:shell:data'
     const handler = (_event, id, data) => callback(id, data)
-    ipcRenderer.removeAllListeners('adb:shell:data')
-    ipcRenderer.on('adb:shell:data', handler)
+    ipcRenderer.removeAllListeners(channel)
+    ipcRenderer.on(channel, handler)
   },
-  onShellExit: (callback) => {
+  onShellExit: (type, callback) => {
+    const channel = type === 'adb' ? 'adb:shell:exit' : 'local:shell:exit'
     const handler = (_event, id) => callback(id)
-    ipcRenderer.removeAllListeners('adb:shell:exit')
-    ipcRenderer.on('adb:shell:exit', handler)
+    ipcRenderer.removeAllListeners(channel)
+    ipcRenderer.on(channel, handler)
   },
+  localShellStart: () => ipcRenderer.invoke('local:shell:start'),
+  localShellWrite: (id, data) => ipcRenderer.send('local:shell:write', id, data),
+  localShellKill: (id) => ipcRenderer.send('local:shell:kill', id),
+  localShellFlushStdin: (id) => ipcRenderer.send('local:shell:flush-stdin', id),
+  localShellReconnect: (oldId) => ipcRenderer.invoke('local:shell:reconnect', oldId),
   loadHistory: () => ipcRenderer.invoke('history:load'),
   saveHistory: (history) => ipcRenderer.invoke('history:save', history),
   writeLog: (message) => ipcRenderer.invoke('log:write', message),

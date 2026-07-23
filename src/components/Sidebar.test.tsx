@@ -10,7 +10,7 @@ describe('Sidebar', () => {
     vi.clearAllMocks()
   })
 
-  it('应该正确渲染 Logo 和应用名称', () => {
+  it('应该正确渲染 Logo 和应用名称 (Admin 模式)', () => {
     render(
       <Provider store={store}>
         <HashRouter>
@@ -18,10 +18,10 @@ describe('Sidebar', () => {
         </HashRouter>
       </Provider>
     )
-    expect(screen.getByText('TsCameraTools')).toBeInTheDocument()
+    expect(screen.getByText('TsCameraTools Admin')).toBeInTheDocument()
   })
 
-  it('应该渲染导航菜单项', () => {
+  it('应该渲染管理导航菜单项', () => {
     render(
       <Provider store={store}>
         <HashRouter>
@@ -29,7 +29,7 @@ describe('Sidebar', () => {
         </HashRouter>
       </Provider>
     )
-    expect(screen.getByText('设备连接')).toBeInTheDocument()
+    expect(screen.getByText('用户管理')).toBeInTheDocument()
   })
 
   it('应该渲染版本号', () => {

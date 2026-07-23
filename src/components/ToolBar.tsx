@@ -1,6 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Smartphone, Terminal, MemoryStick } from 'lucide-react'
+import { Smartphone, MemoryStick } from 'lucide-react'
 import type { RootState, AppDispatch } from '../store'
 import { switchTool } from '../store/reducers/ui'
 
@@ -13,7 +13,6 @@ interface ToolInfo {
 
 const tools: ToolInfo[] = [
   { id: 'devices', label: '设备连接', icon: <Smartphone size={16} />, path: '/' },
-  { id: 'terminal', label: '本地终端', icon: <Terminal size={16} />, path: '/terminal' },
   { id: 'memory', label: '内存分析', icon: <MemoryStick size={16} />, path: '/memory' },
 ]
 
@@ -35,6 +34,9 @@ export default function ToolBar() {
 
   // 根据当前路径确定活跃工具
   const currentToolId = tools.find(t => t.path === location.pathname)?.id || 'devices'
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+
+  if (!isElectron) return null
 
   return (
     <div className="flex items-center gap-1 px-4 py-2 bg-[var(--color-card-bg)] border-b border-[var(--color-border)]">

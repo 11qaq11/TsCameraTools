@@ -1,162 +1,46 @@
 # TsCameraTools
 
-影像开发工具箱 IDE，支持 Web 和 Electron 两种运行模式。
+小米影像开发工程师桌面集成工具箱。
 
-## 功能特性
-
-- ADB 设备检测/安装/连接
-- ttyd Web 终端（iframe 嵌入，支持中文输入、ZMODEM 文件传输、Sixel 图像输出）
-- 飞书 OAuth 登录
-- Light 主题设计（蓝色主色调 #2563EB）
-- 可扩展左侧导航栏（数据驱动配置）
-- 命令历史记录（最多 300 条）
-- 历史命令搜索（Ctrl+R）
+- **Electron 桌面端**（主力）：ADB 设备管理、Shell 终端、内存分析
+- **Web 管理后台**（辅助）：用户管理、操作日志、系统配置（仅管理员）
 
 ## 快速开始
 
-### Web 模式（推荐）
-
 ```bash
 npm install
-npm run web:dev        # 开发模式（前端 + 后端）
-npm run web:build      # 生产构建
-npm run web:start      # 启动生产服务器
+npm run electron:dev    # Electron 开发
+npm run web:dev         # Web 管理后台开发
 ```
 
-### Electron 模式
+## 构建
 
 ```bash
-npm install
-npm run electron:dev   # 开发模式
-npm run electron:build # 打包 Windows exe
+npm run web:build       # tsc + vite + server → dist/
+npm run electron:build  # tsc + vite + electron-builder → release/*.exe
+npm run test:all        # 103 + 89 tests
+npm run lint            # oxlint
 ```
 
-打包产物：`release/win-unpacked/TsCameraTools.exe`
-
-## 项目结构
+## 核心架构
 
 ```
-TsCameraTools/
-├── electron/              # Electron 主进程
-│   ├── main.cjs           # 主进程（IPC handlers, ADB 逻辑）
-│   └── preload.cjs        # 预加载脚本（暴露 electronAPI）
-├── server/                # Web 模式后端
-│   ├── index.ts           # 服务器入口
-│   ├── config.ts          # 配置文件
-│   ├── routes/            # API 路由
-│   │   ├── auth.ts        # 飞书 OAuth
-│   │   ├── adb.ts         # ADB API
-│   │   └── logs.ts        # 日志 API
-│   ├── services/          # 业务服务
-│   │   └── shell.ts       # Shell 终端服务
-│   └── types/             # 类型定义
-├── src/                   # 前端源码
-│   ├── components/        # UI 组件
-│   │   └── terminal/      # 终端组件
-│   ├── hooks/             # 自定义 Hooks
-│   ├── layouts/           # 布局组件
-│   ├── pages/             # 页面组件
-│   ├── store/             # Redux 状态管理
-│   ├── utils/             # 工具函数
-│   ├── types/             # 类型定义
-│   └── config/            # 配置文件
-├── specs/                 # 功能规格文档
-├── scripts/               # 脚本工具
-├── certs/                 # SSL 证书
-└── AGENTS.md              # 开发准则
+electron/main.cjs      → IPC + child_process.spawn (ADB Shell / 本地终端)
+electron/preload.cjs   → 暴露 electronAPI 到渲染进程
+src/pages/Devices.tsx  → 设备管理 (Electron)
+src/pages/admin/       → 管理后台页面 (Web)
+server/                → Express 后端 (管理后台 API)
 ```
-
-## 命令参考
-
-| 命令 | 说明 |
-|------|------|
-| `npm run dev` | Vite 开发服务器 |
-| `npm run build` | TypeScript 编译 + Vite 构建 |
-| `npm run lint` | 代码检查 (oxlint) |
-| `npm run web:dev` | Web 开发模式 |
-| `npm run web:build` | Web 生产构建 |
-| `npm run web:start` | 启动生产服务器 |
-| `npm run server:dev` | 后端开发模式 |
-| `npm run server:build` | 后端编译 |
-| `npm run server:start` | 启动生产后端 |
-| `npm run electron:dev` | Electron 开发模式 |
-| `npm run electron:build` | Electron 打包 |
-| `npm run electron:pack` | Electron 打包（目录） |
-
-## 技术栈
-
-### 前端
-- React 19 + TypeScript
-- Vite 8 + Tailwind CSS 4
-- Redux Toolkit（状态管理）
-- React Router v7（路由）
-- xterm.js（终端模拟）
-- lucide-react（图标）
-- Socket.io Client（WebSocket）
-
-### 后端
-- Express.js
-- Socket.io（WebSocket）
-- 飞书 OAuth 2.0
-
-### 桌面端
-- Electron 43
-- contextBridge（安全 IPC）
 
 ## 环境变量
 
-复制 `.env.example` 为 `.env`，配置以下变量：
-
+`.env.example` → `.env`:
 ```env
-# 飞书 OAuth
-FEISHU_APP_ID=your_app_id
-FEISHU_APP_SECRET=your_app_secret
-
-# ADB 路径（可选）
-ADB_PATH=/path/to/adb
-
-# ttyd 终端配置
-TTYD_PORT_START=7681
-TTYD_PORT_END=7690
-TTYD_CREDENTIAL=admin:admin
+AUTH_DEBUG=true        # 跳过飞书 OAuth (开发用)
+FEISHU_APP_ID / FEISHU_APP_SECRET
+DATABASE_URL           # PostgreSQL 连接
 ```
 
-## 开发规范
+## 开发准则
 
-详见 [AGENTS.md](./AGENTS.md)
-
-## Git 工作流
-
-### 分支命名
-
-| 前缀 | 用途 |
-|------|------|
-| `feature/` | 新功能 |
-| `fix/` | 修复 bug |
-| `refactor/` | 重构 |
-| `docs/` | 文档变更 |
-
-### Commit 格式
-
-```
-type: description
-```
-
-类型：`feat`, `fix`, `refactor`, `docs`, `test`, `chore`
-
-### 注意事项
-
-- 禁止直接向 master 推送代码
-- 禁止对 master 强制推送
-- PR 合并前确保 `npm run build` 通过
-
-## 已知问题
-
-- **终端连接失败**：ttyd 终端通过 iframe 嵌入，点击 Connect 后可能因 ttyd 进程启动超时或端口冲突导致连接失败。需检查 `bin/ttyd/ttyd.exe` 是否存在，以及端口 7681-7690 是否被占用。
-- Shell 终端使用 iframe 模式（ttyd），与旧版本的本地回显模式不同
-- 中文输入法支持依赖 ttyd 原生 IME 处理
-- WebSocket 连接在后端启动前有短暂报错（不影响功能）
-
-## 许可证
-
-私有项目
+[AGENTS.md](./AGENTS.md)
