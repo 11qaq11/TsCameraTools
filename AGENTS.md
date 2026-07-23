@@ -145,6 +145,74 @@ docker-compose down
 
 ---
 
+## 连接服务器
+
+### SSH 免密登录（生产服务器 122.51.90.193）
+
+```bash
+# 直接连接
+ssh server
+
+# 执行远程命令
+ssh server "docker compose -f /home/ubuntu/TsToolsPlatform/docker-compose.yml ps"
+ssh server "tail -50 /home/ubuntu/TsToolsPlatform/build.log"
+
+# 上传文件
+scp local-file server:/home/ubuntu/TsToolsPlatform/
+
+# 下载文件
+scp server:/home/ubuntu/TsToolsPlatform/backup.sql .
+```
+
+### SSH 配置（~/.ssh/config）
+
+```
+Host server
+    HostName 122.51.90.193
+    User ubuntu
+    IdentityFile ~/.ssh/mimo_ed25519
+    IdentitiesOnly yes
+    StrictHostKeyChecking accept-new
+```
+
+### 密钥文件
+
+| 文件 | 说明 |
+|------|------|
+| `~/.ssh/mimo_ed25519` | 私钥（本地生成，已授权到服务器） |
+| `~/.ssh/mimo_ed25519.pub` | 公钥（已追加到服务器 authorized_keys） |
+
+### 服务器项目路径
+
+| 路径 | 说明 |
+|------|------|
+| `/home/ubuntu/TsToolsPlatform/` | 项目根目录 |
+| `/home/ubuntu/TsToolsPlatform/docker-compose.yml` | Docker 编排 |
+| `/home/ubuntu/TsToolsPlatform/.env` | 环境变量（飞书OAuth+数据库） |
+| `/home/ubuntu/TsToolsPlatform/build.log` | 构建日志 |
+
+### 容器管理
+
+```bash
+# 进入服务器后
+cd /home/ubuntu/TsToolsPlatform
+
+# 重启容器
+docker compose up -d
+
+# 重新构建并启动（代码有更新时）
+docker compose up -d --build
+
+# 查看数据库
+docker compose exec postgres psql -U postgres -d tscameratools
+```
+
+### 防火墙
+
+腾讯云安全组需要开放端口：**22**（SSH）、**80**（Web）、**3000**（API/OAuth回调）。
+
+---
+
 ## 新增功能模式
 
 ### 新增页面
