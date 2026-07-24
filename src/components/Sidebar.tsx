@@ -14,8 +14,10 @@ const allItems = isElectron ? navItems : adminNavItems
 const pathToToolId: Record<string, string> = isElectron ? {
   '/': 'devices',
   '/memory': 'memory',
+  '/feedback': 'feedback',
 } : {
   '/admin/users': 'admin-users',
+  '/admin/feedback': 'admin-feedback',
   '/admin/logs': 'admin-logs',
   '/admin/config': 'admin-config',
 }

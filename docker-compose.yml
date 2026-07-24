@@ -34,6 +34,7 @@ services:
       - FEISHU_APP_SECRET=${FEISHU_APP_SECRET}
       - FEISHU_REDIRECT_URI=${FEISHU_REDIRECT_URI:-http://122.51.90.193:3000/auth/feishu/callback}
       - SESSION_EXPIRY_HOURS=${SESSION_EXPIRY_HOURS:-24}
+      - AUTH_DEBUG=${AUTH_DEBUG:-false}
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped

@@ -18,7 +18,9 @@ describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    vi.stubGlobal('fetch', vi.fn())
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ authDebug: false }),
+    }))
   })
 
   const renderLogin = () =>
@@ -41,9 +43,10 @@ describe('Login', () => {
   })
 
   it('点击登录调用 fetch 获取 authUrl', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      json: () => Promise.resolve({ authUrl: 'https://feishu.cn/auth' }),
-    } as Response)
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (url === '/api/debug/config') return Promise.resolve({ json: () => Promise.resolve({ authDebug: false }) }) as any
+      return Promise.resolve({ json: () => Promise.resolve({ authUrl: 'https://feishu.cn/auth' }) }) as any
+    })
 
     renderLogin()
     await userEvent.click(screen.getByText('使用飞书账号登录'))
@@ -54,7 +57,10 @@ describe('Login', () => {
   })
 
   it('fetch 失败时显示错误', async () => {
-    vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (url === '/api/debug/config') return Promise.resolve({ json: () => Promise.resolve({ authDebug: false }) }) as any
+      return Promise.reject(new Error('Network error'))
+    })
 
     renderLogin()
     await userEvent.click(screen.getByText('使用飞书账号登录'))
@@ -65,9 +71,10 @@ describe('Login', () => {
   })
 
   it('响应无 authUrl 时显示错误', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      json: () => Promise.resolve({}),
-    } as Response)
+    vi.mocked(fetch).mockImplementation((url) => {
+      if (url === '/api/debug/config') return Promise.resolve({ json: () => Promise.resolve({ authDebug: false }) }) as any
+      return Promise.resolve({ json: () => Promise.resolve({}) }) as any
+    })
 
     renderLogin()
     await userEvent.click(screen.getByText('使用飞书账号登录'))

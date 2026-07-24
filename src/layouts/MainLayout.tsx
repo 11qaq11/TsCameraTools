@@ -8,6 +8,8 @@ import MemoryAnalysis from '../pages/MemoryAnalysis'
 import UserManagement from '../pages/admin/UserManagement'
 import SystemLogs from '../pages/admin/SystemLogs'
 import SystemConfig from '../pages/admin/SystemConfig'
+import Feedback from '../pages/Feedback'
+import FeedbackList from '../pages/admin/FeedbackList'
 
 // ponytail: Electron vs Web 模式检测，后续工具市场统一管理
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
@@ -36,6 +38,12 @@ function MainLayout() {
           </div>
           <div className={`relative flex flex-col flex-1 min-h-0 ${location.pathname === '/admin/config' ? '' : 'hidden'}`}>
             <SystemConfig />
+          </div>
+          <div className={`relative flex flex-col flex-1 min-h-0 ${location.pathname === '/admin/feedback' ? '' : 'hidden'}`}>
+            <FeedbackList />
+          </div>
+          <div className={`relative flex flex-col flex-1 min-h-0 ${location.pathname === '/feedback' ? '' : 'hidden'}`}>
+            <Feedback />
           </div>
         </main>
       </div>

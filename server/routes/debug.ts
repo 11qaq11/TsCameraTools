@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express'
 import pino from 'pino'
 import { config } from '../config.js'
+import { query } from '../db/index.js'
+import crypto from 'crypto'
 
 export interface LogEntry {
   level: number
@@ -94,6 +96,39 @@ router.get('/config', (_req: Request, res: Response) => {
     ttydPortRange: `${config.ttyd.portStart}-${config.ttyd.portEnd}`,
     databaseUrl: config.database.url.replace(/\/\/.*@/, '//***:***@'),
   })
+})
+
+// POST /api/debug/login - debug mode auto-login (only when AUTH_DEBUG=true)
+router.post('/login', async (_req: Request, res: Response) => {
+  if (!config.authDebug) {
+    return res.status(403).json({ error: 'Debug login only available when AUTH_DEBUG=true' })
+  }
+
+  try {
+    // Ensure debug user exists
+    const { rows } = await query(
+      `INSERT INTO users (feishu_id, name, email, tenant_key)
+       VALUES ('debug', '调试用户', 'debug@local', 'debug')
+       ON CONFLICT (feishu_id) DO UPDATE SET last_login_at = NOW()
+       RETURNING id`,
+    )
+
+    const userId = rows[0].id
+    const sessionId = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
+    await query(
+      'INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)',
+      [sessionId, userId, expiresAt]
+    )
+
+    res.json({
+      token: sessionId,
+      user: { id: userId, name: '调试用户', email: 'debug@local', feishu_id: 'debug', tenant_key: 'debug' }
+    })
+  } catch (e) {
+    res.status(500).json({ error: 'Debug login failed' })
+  }
 })
 
 export { router }

@@ -10,6 +10,7 @@ const isElectron = typeof window !== 'undefined' && !!(window as any).electronAP
 function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugMode, setDebugMode] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -29,7 +30,33 @@ function Login() {
       logger.info('Login', 'Already authenticated, redirecting to /')
       navigate('/')
     }
+
+    // Check if debug mode is enabled on server
+    fetch('/api/debug/config')
+      .then(res => res.json())
+      .then(data => { if (data.authDebug) setDebugMode(true) })
+      .catch(() => {})
   }, [navigate])
+
+  const handleDebugLogin = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/debug/login', { method: 'POST' })
+      const data = await res.json() as { token: string; user: { id: string; name: string; email: string; feishu_id: string; tenant_key: string } }
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user_info', JSON.stringify(data.user))
+        navigate('/')
+      } else {
+        setError('调试登录失败')
+      }
+    } catch {
+      setError('网络错误')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleFeishuLogin = async () => {
     logger.info('Login', '=== Feishu login clicked ===')
@@ -75,11 +102,11 @@ function Login() {
           </div>
         )}
 
-        <div className="flex justify-center">
+        <div className="flex justify-center flex-col gap-3">
           <button
             onClick={handleFeishuLogin}
             disabled={loading}
-            className="flex w-full max-w-xs items-center justify-center gap-3 rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-50 cursor-pointer glow-border"
+            className="flex w-full max-w-xs mx-auto items-center justify-center gap-3 rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-white transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-50 cursor-pointer glow-border"
           >
             {loading ? (
               <Loader2 size={18} className="animate-spin" />
@@ -90,6 +117,15 @@ function Login() {
             )}
             {loading ? '正在跳转...' : '使用飞书账号登录'}
           </button>
+          {debugMode && (
+            <button
+              onClick={handleDebugLogin}
+              disabled={loading}
+              className="flex w-full max-w-xs mx-auto items-center justify-center gap-3 rounded-lg border border-[var(--color-accent-orange)] bg-[var(--color-accent-orange)]/10 px-4 py-3 text-sm font-medium text-[var(--color-accent-orange)] transition-all hover:bg-[var(--color-accent-orange)]/20 disabled:opacity-50 cursor-pointer"
+            >
+              调试登录（AUTH_DEBUG）
+            </button>
+          )}
         </div>
 
         <div className="mt-6 text-center text-xs text-[var(--color-text-secondary)]">

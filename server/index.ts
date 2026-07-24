@@ -18,6 +18,7 @@ import ttydRoutes from './routes/ttyd.js'
 import debugRoutes from './routes/debug.js'
 import memoryRoutes from './routes/memory.js'
 import userRoutes from './routes/user.js'
+import feedbackRoutes from './routes/feedback.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -53,6 +54,7 @@ app.use('/api/ttyd', ttydRoutes)
 app.use('/api/debug', debugRoutes)
 app.use('/api/memory', memoryRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/feedback', feedbackRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })

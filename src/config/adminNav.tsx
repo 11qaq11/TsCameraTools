@@ -1,4 +1,4 @@
-import { Users, ScrollText, Settings } from 'lucide-react'
+import { Users, ScrollText, Settings, MessageSquare } from 'lucide-react'
 import type { NavItem } from '../types'
 
 export const adminNavItems: NavItem[] = [
@@ -7,6 +7,13 @@ export const adminNavItems: NavItem[] = [
     label: '用户管理',
     icon: <Users size={20} />,
     path: '/admin/users',
+    group: '管理',
+  },
+  {
+    id: 'admin-feedback',
+    label: '用户反馈',
+    icon: <MessageSquare size={20} />,
+    path: '/admin/feedback',
     group: '管理',
   },
   {
