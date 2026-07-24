@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../utils/auth'
+import { logger } from '../../utils/logger'
 
 interface LogEntry {
   timestamp: string
@@ -7,8 +9,40 @@ interface LogEntry {
   message: string
 }
 
+interface LogFile {
+  name: string
+  size: number
+  modified: string
+}
+
 export default function SystemLogs() {
-  const [logs] = useState<LogEntry[]>([])
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [files, setFiles] = useState<LogFile[]>([])
+  const [selectedFile, setSelectedFile] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchWithAuth('/api/logs/files')
+      .then(res => res.json())
+      .then((data: { files: LogFile[] }) => {
+        setFiles(data.files)
+        if (data.files.length > 0) {
+          setSelectedFile(data.files[0].name)
+        }
+      })
+      .catch(err => logger.error('Admin', 'Failed to fetch log files:', err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (!selectedFile) return
+    setLoading(true)
+    fetchWithAuth(`/api/logs/read?file=${encodeURIComponent(selectedFile)}`)
+      .then(res => res.json())
+      .then((data: { entries: LogEntry[] }) => setLogs(data.entries))
+      .catch(err => logger.error('Admin', 'Failed to read log file:', err))
+      .finally(() => setLoading(false))
+  }, [selectedFile])
 
   const levelColor = (level: string) => {
     switch (level) {
@@ -20,10 +54,25 @@ export default function SystemLogs() {
 
   return (
     <div className="p-6">
-      <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">操作日志</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">操作日志</h2>
+        <select
+          value={selectedFile}
+          onChange={(e) => setSelectedFile(e.target.value)}
+          className="px-3 py-1.5 text-sm rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] text-[var(--color-text-primary)] cursor-pointer"
+        >
+          {files.map(f => (
+            <option key={f.name} value={f.name}>
+              {f.name} ({new Date(f.modified).toLocaleString('zh-CN')})
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card-bg)] overflow-hidden">
         <div className="max-h-[calc(100vh-16rem)] overflow-y-auto">
-          {logs.length === 0 ? (
+          {loading ? (
+            <p className="px-4 py-8 text-center text-[var(--color-text-secondary)] text-sm">加载中...</p>
+          ) : logs.length === 0 ? (
             <p className="px-4 py-8 text-center text-[var(--color-text-secondary)] text-sm">暂无日志数据</p>
           ) : (
             <table className="w-full text-sm">

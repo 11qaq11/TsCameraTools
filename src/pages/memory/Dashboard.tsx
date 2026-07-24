@@ -27,6 +27,7 @@ const INTERVAL_OPTIONS = [
 
 export default function Dashboard() {
   const dispatch = useDispatch()
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
   const {
     serial,
     selectedNames,
@@ -75,11 +76,16 @@ export default function Dashboard() {
 
     const fetchPids = async () => {
       try {
-        const res = await fetchWithAuth(`/api/memory/pids/${serial}`, {
-          method: 'POST',
-          body: JSON.stringify({ names: selectedNames }),
-        })
-        const pidMap = (await res.json()) as Record<string, number | null>
+        let pidMap: Record<string, number | null>
+        if (isElectron) {
+          pidMap = await window.electronAPI!.memoryGetPids(serial, selectedNames)
+        } else {
+          const res = await fetchWithAuth(`/api/memory/pids/${serial}`, {
+            method: 'POST',
+            body: JSON.stringify({ names: selectedNames }),
+          })
+          pidMap = await res.json() as Record<string, number | null>
+        }
         // Update pidByName in Redux via pushSamples
         const pidSamples: Sample[] = selectedNames.map((name) => ({
           kind: 'dumpsys' as const,
@@ -99,7 +105,7 @@ export default function Dashboard() {
       }
     }
     fetchPids()
-  }, [serial, selectedNames, dispatch])
+  }, [serial, selectedNames, dispatch, isElectron])
 
   // 重置polling状态（进入仪表盘时）
   useEffect(() => {
@@ -109,57 +115,95 @@ export default function Dashboard() {
     }
   }, [connected, dispatch])
 
-  // WebSocket connection (native WebSocket to /memory path)
+  // WebSocket / IPC polling connection
   useEffect(() => {
     if (!serial) return
 
-    const isDev = import.meta.env.DEV
-    const wsHost = isDev ? (import.meta.env.VITE_API_HOST || 'localhost') : window.location.hostname
-    const wsPort = isDev ? (import.meta.env.VITE_API_PORT || '3000') : window.location.port || '3000'
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${wsHost}:${wsPort}/memory`
-
-    const ws = new WebSocket(wsUrl)
-
-    ws.onopen = () => {
+    if (isElectron) {
+      // Electron: listen for samples from main process polling
+      window.electronAPI!.onMemorySamples((samples: Sample[]) => {
+        dispatch(pushSamples(samples))
+      })
+      window.electronAPI!.onMemoryError((err: { kind: string; message: string }) => {
+        logger.error('Dashboard', `Memory poller error [${err.kind}]:`, err.message)
+      })
       setConnected(true)
-      // 连接建立时重置polling状态
-      dispatch(setPolling(false))
-      logger.info('Dashboard', 'Memory WebSocket connected')
-    }
+      return () => {
+        window.electronAPI!.memoryPollStop()
+        setConnected(false)
+      }
+    } else {
+      // Web: native WebSocket to /memory path
+      const isDev = import.meta.env.DEV
+      const wsHost = isDev ? (import.meta.env.VITE_API_HOST || 'localhost') : window.location.hostname
+      const wsPort = isDev ? (import.meta.env.VITE_API_PORT || '3000') : window.location.port || '3000'
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${protocol}//${wsHost}:${wsPort}/memory`
 
-    ws.onclose = () => {
-      setConnected(false)
-      dispatch(setPolling(false))
-      logger.info('Dashboard', 'Memory WebSocket disconnected')
-    }
+      const ws = new WebSocket(wsUrl)
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data)
-        if (msg.type === 'samples' && msg.samples) {
-          dispatch(pushSamples(msg.samples as Sample[]))
-        } else if (msg.type === 'ready') {
-          logger.info('Dashboard', 'Memory WebSocket ready')
+      ws.onopen = () => {
+        setConnected(true)
+        dispatch(setPolling(false))
+        logger.info('Dashboard', 'Memory WebSocket connected')
+      }
+
+      ws.onclose = () => {
+        setConnected(false)
+        dispatch(setPolling(false))
+        logger.info('Dashboard', 'Memory WebSocket disconnected')
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.type === 'samples' && msg.samples) {
+            dispatch(pushSamples(msg.samples as Sample[]))
+          } else if (msg.type === 'ready') {
+            logger.info('Dashboard', 'Memory WebSocket ready')
+          }
+        } catch (e) {
+          logger.error('Dashboard', 'Failed to parse WS message:', e)
         }
-      } catch (e) {
-        logger.error('Dashboard', 'Failed to parse WS message:', e)
+      }
+
+      ws.onerror = (err) => {
+        logger.error('Dashboard', 'Memory WebSocket error:', err)
+      }
+
+      wsRef.current = ws
+
+      return () => {
+        ws.close()
+        wsRef.current = null
       }
     }
-
-    ws.onerror = (err) => {
-      logger.error('Dashboard', 'Memory WebSocket error:', err)
-    }
-
-    wsRef.current = ws
-
-    return () => {
-      ws.close()
-      wsRef.current = null
-    }
-  }, [serial, dispatch])
+  }, [serial, dispatch, isElectron])
 
   const handleStart = useCallback(() => {
+    if (isElectron) {
+      dispatch(clearCapture())
+      dispatch(setPolling(true))
+      startedAtRef.current = Date.now()
+
+      const procs = selectedNames.map((name) => {
+        const proc = processes.find((p) => p.name === name)
+        return {
+          name,
+          pid: pidByName[name] ?? null,
+          dynamic: proc?.dynamic ?? true,
+        }
+      })
+
+      window.electronAPI!.memoryPollStart({
+        serial: serial!,
+        procs,
+        intervalMs,
+        showSystemMem,
+      })
+      return
+    }
+
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return
 
@@ -167,7 +211,6 @@ export default function Dashboard() {
     dispatch(setPolling(true))
     startedAtRef.current = Date.now()
 
-    // 构建进程列表，包含动态标记
     const procs = selectedNames.map((name) => {
       const proc = processes.find((p) => p.name === name)
       return {
@@ -186,15 +229,21 @@ export default function Dashboard() {
         showSystemMem,
       },
     }))
-  }, [serial, selectedNames, intervalMs, showSystemMem, processes, pidByName, dispatch])
+  }, [serial, selectedNames, intervalMs, showSystemMem, processes, pidByName, dispatch, isElectron])
 
   const handleStop = useCallback(() => {
+    if (isElectron) {
+      window.electronAPI!.memoryPollStop()
+      dispatch(setPolling(false))
+      return
+    }
+
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return
 
     ws.send(JSON.stringify({ type: 'stop' }))
     dispatch(setPolling(false))
-  }, [dispatch])
+  }, [dispatch, isElectron])
 
   const handleProcessClick = (name: string) => {
     const pid = pidByName[name] ?? null

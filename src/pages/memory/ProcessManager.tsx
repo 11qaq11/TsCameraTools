@@ -41,6 +41,7 @@ const PRESET_PROCESSES: ProcessEntry[] = [
 
 export default function ProcessManager() {
   const dispatch = useDispatch()
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
   const serial = useSelector((s: RootState) => s.memory.serial)
   const customProcesses = useSelector((s: RootState) => s.memory.customProcesses)
 
@@ -55,11 +56,16 @@ export default function ProcessManager() {
     if (!serial) return procs
     try {
       const names = procs.map((p) => p.name)
-      const res = await fetchWithAuth(`/api/memory/pids/${serial}`, {
-        method: 'POST',
-        body: JSON.stringify({ names }),
-      })
-      const pidMap = (await res.json()) as Record<string, number | null>
+      let pidMap: Record<string, number | null>
+      if (isElectron) {
+        pidMap = await window.electronAPI!.memoryGetPids(serial, names)
+      } else {
+        const res = await fetchWithAuth(`/api/memory/pids/${serial}`, {
+          method: 'POST',
+          body: JSON.stringify({ names }),
+        })
+        pidMap = await res.json() as Record<string, number | null>
+      }
       return procs.map((p) => ({
         ...p,
         pid: pidMap[p.name] ?? null,

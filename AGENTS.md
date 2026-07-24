@@ -91,3 +91,7 @@ ssh server                       # 122.51.90.193 (ubuntu, ~/.ssh/mimo_ed25519)
 - `node-pty` 原生模块需编译环境 (Docker Alpine 需 `libc6-compat`)
 - `electron-builder` 设了 `npmRebuild: false` 跳过 node-pty 重编译
 - Web 模式下 memory 分析页面仍用 `fetchWithAuth` 调后端 API (Electron 下不可用)
+
+## 项目路线图
+
+[ROADMAP.md](./ROADMAP.md) — 当前进度、待修复问题、后续规划

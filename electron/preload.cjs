@@ -31,4 +31,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadHistory: () => ipcRenderer.invoke('history:load'),
   saveHistory: (history) => ipcRenderer.invoke('history:save', history),
   writeLog: (message) => ipcRenderer.invoke('log:write', message),
+  memoryGetPids: (serial, names) => ipcRenderer.invoke('memory:get-pids', serial, names),
+  memoryPollStart: (opts) => ipcRenderer.invoke('memory:poll:start', opts),
+  memoryPollStop: () => ipcRenderer.invoke('memory:poll:stop'),
+  memoryShowmap: (serial, pid) => ipcRenderer.invoke('memory:showmap', serial, pid),
+  memoryDmabufDump: (serial, pid) => ipcRenderer.invoke('memory:dmabuf-dump', serial, pid),
+  onMemorySamples: (callback) => {
+    ipcRenderer.removeAllListeners('memory:samples')
+    ipcRenderer.on('memory:samples', (_event, samples) => callback(samples))
+  },
+  onMemoryError: (callback) => {
+    ipcRenderer.removeAllListeners('memory:error')
+    ipcRenderer.on('memory:error', (_event, error) => callback(error))
+  },
 })

@@ -85,4 +85,36 @@ router.get('/files', (req, res) => {
   }
 })
 
+// 读取指定日志文件内容
+router.get('/read', (req, res) => {
+  try {
+    const logDir = ensureLogDir()
+    const filename = req.query.file as string
+
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' })
+    }
+
+    const filePath = path.join(logDir, filename)
+    if (!fs.existsSync(filePath)) {
+      return res.json({ entries: [] })
+    }
+
+    const content = fs.readFileSync(filePath, 'utf-8')
+    const lines = content.split('\n').filter(Boolean)
+
+    // Parse: [timestamp][level][tag] message{"json":...}
+    const entries = lines.map(line => {
+      const m = line.match(/^\[(.+?)\]\[(.+?)\]\[(.+?)\]\s+(.+)$/)
+      if (!m) return null
+      const [, timestamp, level, module, message] = m
+      return { timestamp, level, module, message }
+    }).filter(Boolean)
+
+    res.json({ entries })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to read log file' })
+  }
+})
+
 export default router

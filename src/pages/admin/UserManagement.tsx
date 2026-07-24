@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchWithAuth } from '../../utils/auth'
+import { logger } from '../../utils/logger'
 
 interface User {
   id: number
@@ -6,10 +8,21 @@ interface User {
   email: string
   feishu_id: string
   tenant_key: string
+  created_at: string
+  last_login_at: string
 }
 
 export default function UserManagement() {
-  const [users] = useState<User[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchWithAuth('/api/user/list')
+      .then(res => res.json())
+      .then(data => setUsers(data.users as User[]))
+      .catch(err => logger.error('Admin', 'Failed to fetch users:', err))
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <div className="p-6">
@@ -23,12 +36,17 @@ export default function UserManagement() {
               <th className="text-left px-4 py-3 text-[var(--color-text-secondary)] font-medium">邮箱</th>
               <th className="text-left px-4 py-3 text-[var(--color-text-secondary)] font-medium">飞书 ID</th>
               <th className="text-left px-4 py-3 text-[var(--color-text-secondary)] font-medium">租户</th>
+              <th className="text-left px-4 py-3 text-[var(--color-text-secondary)] font-medium">最后登录</th>
             </tr>
           </thead>
           <tbody>
-            {users.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-[var(--color-text-secondary)]">暂无用户数据</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-text-secondary)]">加载中...</td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--color-text-secondary)]">暂无用户数据</td>
               </tr>
             ) : (
               users.map(u => (
@@ -38,6 +56,9 @@ export default function UserManagement() {
                   <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.email}</td>
                   <td className="px-4 py-3 font-mono text-xs">{u.feishu_id}</td>
                   <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.tenant_key}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+                    {u.last_login_at ? new Date(u.last_login_at).toLocaleString('zh-CN') : '-'}
+                  </td>
                 </tr>
               ))
             )}

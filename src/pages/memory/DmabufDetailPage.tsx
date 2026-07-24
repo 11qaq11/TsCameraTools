@@ -18,7 +18,8 @@ const fmtTs = (ts: number): string => {
 
 export default function DmabufDetailPage() {
   const dispatch = useDispatch()
-  const { detailPid, detailName, dmabufByName, peakDmabuf, peakDmabufBreakdown } = useSelector(
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+  const { detailPid, detailName, dmabufByName, peakDmabuf, peakDmabufBreakdown, serial } = useSelector(
     (s: RootState) => s.memory
   )
 
@@ -30,13 +31,18 @@ export default function DmabufDetailPage() {
   const [mode, setMode] = useState<'current' | 'peak'>('current')
 
   const fetchDump = useCallback(async (silent = false) => {
-    if (detailPid == null) return
+    if (detailPid == null || !serial) return
     if (!silent) setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/memory/dmabuf-dump/${encodeURIComponent(detailPid)}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      let data: { ok: boolean; data?: ParsedDmabufDump; error?: string }
+      if (isElectron) {
+        data = await window.electronAPI!.memoryDmabufDump(serial, detailPid)
+      } else {
+        const res = await fetch(`/api/memory/dmabuf-dump/${encodeURIComponent(detailPid)}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        data = await res.json()
+      }
       if (data.ok && data.data) setDump(data.data)
       else setError(data.error ?? '拉取 dmabuf_dump 失败')
     } catch (e) {
@@ -44,7 +50,7 @@ export default function DmabufDetailPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [detailPid])
+  }, [detailPid, serial, isElectron])
 
   useEffect(() => {
     void fetchDump()

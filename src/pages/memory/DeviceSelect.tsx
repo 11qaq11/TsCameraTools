@@ -14,6 +14,8 @@ interface AdbDevice {
 
 export default function DeviceSelect() {
   const dispatch = useDispatch()
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+
   const [devices, setDevices] = useState<AdbDevice[]>([])
   const [loading, setLoading] = useState(true)
   const [adbAvailable, setAdbAvailable] = useState<boolean | null>(null)
@@ -24,11 +26,15 @@ export default function DeviceSelect() {
   const checkAdb = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetchWithAuth('/api/adb/check')
-      const data = await res.json() as { available: boolean }
-      setAdbAvailable(data.available)
-      if (data.available) {
-        await refreshDevices()
+      if (isElectron) {
+        const res = await window.electronAPI!.adbCheck()
+        setAdbAvailable(res.available)
+        if (res.available) await refreshDevices()
+      } else {
+        const res = await fetchWithAuth('/api/adb/check')
+        const data = await res.json() as { available: boolean }
+        setAdbAvailable(data.available)
+        if (data.available) await refreshDevices()
       }
     } catch (err) {
       logger.error('DeviceSelect', 'ADB check failed:', err)
@@ -40,9 +46,14 @@ export default function DeviceSelect() {
   const refreshDevices = async () => {
     setLoading(true)
     try {
-      const res = await fetchWithAuth('/api/adb/devices')
-      const data = await res.json() as { devices: AdbDevice[] }
-      setDevices(data.devices || [])
+      if (isElectron) {
+        const list = await window.electronAPI!.adbDevices()
+        setDevices(list.map(d => ({ serial: d.serial, model: d.model, status: (d.status === 'device' ? 'device' : 'offline') as AdbDevice['status'] })))
+      } else {
+        const res = await fetchWithAuth('/api/adb/devices')
+        const data = await res.json() as { devices: AdbDevice[] }
+        setDevices(data.devices || [])
+      }
     } catch (err) {
       logger.error('DeviceSelect', 'Failed to refresh devices:', err)
     }
@@ -60,11 +71,15 @@ export default function DeviceSelect() {
     dispatch(setDevice(info))
 
     try {
-      const res = await fetchWithAuth(`/api/adb/root/${device.serial}`, { method: 'POST' })
-      const data = await res.json() as { success: boolean; message: string }
-      dispatch(setRoot(data.success))
-      if (!data.success) {
-        logger.warn('DeviceSelect', `Root check: ${data.message}`)
+      if (isElectron) {
+        const data = await window.electronAPI!.adbRoot(device.serial)
+        dispatch(setRoot(data.success))
+        if (!data.success) logger.warn('DeviceSelect', `Root check: ${data.message}`)
+      } else {
+        const res = await fetchWithAuth(`/api/adb/root/${device.serial}`, { method: 'POST' })
+        const data = await res.json() as { success: boolean; message: string }
+        dispatch(setRoot(data.success))
+        if (!data.success) logger.warn('DeviceSelect', `Root check: ${data.message}`)
       }
     } catch (err) {
       logger.error('DeviceSelect', 'Root check failed:', err)

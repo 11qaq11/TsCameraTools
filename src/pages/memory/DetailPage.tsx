@@ -16,6 +16,7 @@ const fmtTs = (ts: number): string => {
 
 export default function DetailPage() {
   const dispatch = useDispatch()
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
   const { detailPid, detailName, dumpsysByName, peakDumpsys, serial } = useSelector(
     (s: RootState) => s.memory
   )
@@ -43,9 +44,14 @@ export default function DetailPage() {
     if (detailPid == null || !serial) return
     if (!silent) setLoading(true)
     try {
-      const res = await fetch(`/api/memory/showmap/${serial}/${encodeURIComponent(detailPid)}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
+      let data: { ok: boolean; data?: { mappings: ShowmapMapping[] }; error?: string; needRoot?: boolean }
+      if (isElectron) {
+        data = await window.electronAPI!.memoryShowmap(serial, detailPid)
+      } else {
+        const res = await fetch(`/api/memory/showmap/${serial}/${encodeURIComponent(detailPid)}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        data = await res.json()
+      }
       if (data.ok && data.data) {
         setShowmap(data.data.mappings)
         updateError(null, false)
@@ -57,7 +63,7 @@ export default function DetailPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [detailPid, serial, updateError])
+  }, [detailPid, serial, updateError, isElectron])
 
   useEffect(() => {
     void fetchShowmap()

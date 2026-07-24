@@ -57,4 +57,17 @@ router.get('/device-history', async (req, res) => {
   }
 })
 
+// 管理员：获取所有用户列表
+router.get('/list', async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, feishu_id, name, email, avatar, tenant_key, created_at, last_login_at
+       FROM users ORDER BY created_at DESC`
+    )
+    res.json({ users: rows })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
 export default router

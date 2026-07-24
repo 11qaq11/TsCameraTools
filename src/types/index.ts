@@ -11,6 +11,7 @@ export interface NavItem {
 export interface AdbDevice {
   serial: string
   model: string
+  status?: string
 }
 
 export interface AdbResult {
@@ -45,6 +46,13 @@ export interface ElectronAPI {
   loadHistory: () => Promise<HistoryResult>
   saveHistory: (history: string[]) => Promise<AdbResult>
   writeLog: (message: string) => Promise<AdbResult>
+  memoryGetPids: (serial: string, names: string[]) => Promise<Record<string, number | null>>
+  memoryPollStart: (opts: { serial: string; procs: { name: string; pid: number | null; dynamic: boolean }[]; intervalMs: number; showSystemMem: boolean }) => Promise<{ success: boolean }>
+  memoryPollStop: () => Promise<{ success: boolean }>
+  memoryShowmap: (serial: string, pid: number) => Promise<{ ok: boolean; data?: { pid: number; mappings: { name: string; vss: number; rss: number; pss: number; dirty: number }[] }; error?: string; needRoot?: boolean }>
+  memoryDmabufDump: (serial: string, pid: number) => Promise<{ ok: boolean; data?: { pid: number; totalKb: number; groups: { sizeKb: number; count: number; totalKb: number }[] }; error?: string }>
+  onMemorySamples: (callback: (samples: import('./memory').Sample[]) => void) => void
+  onMemoryError: (callback: (error: { kind: string; message: string }) => void) => void
 }
 
 declare global {

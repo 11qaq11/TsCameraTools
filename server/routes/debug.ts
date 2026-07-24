@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express'
 import pino from 'pino'
+import { config } from '../config.js'
 
 export interface LogEntry {
   level: number
@@ -78,6 +79,20 @@ router.get('/logs/stream', (req: Request, res: Response) => {
   
   req.on('close', () => {
     sseClients.delete(res)
+  })
+})
+
+// GET /api/debug/config - system config values
+router.get('/config', (_req: Request, res: Response) => {
+  res.json({
+    port: config.port,
+    https: config.https,
+    frontendUrl: config.frontendUrl,
+    sessionExpiryHours: config.session.expiryHours,
+    authDebug: config.authDebug,
+    adbPath: config.adb.path,
+    ttydPortRange: `${config.ttyd.portStart}-${config.ttyd.portEnd}`,
+    databaseUrl: config.database.url.replace(/\/\/.*@/, '//***:***@'),
   })
 })
 
