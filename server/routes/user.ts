@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db/index.js'
-import { authMiddleware } from '../middleware/auth.js'
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -58,7 +58,7 @@ router.get('/device-history', async (req, res) => {
 })
 
 // 管理员：获取所有用户列表
-router.get('/list', async (req, res) => {
+router.get('/list', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { rows } = await query(
       `SELECT id, feishu_id, name, email, avatar, tenant_key, created_at, last_login_at

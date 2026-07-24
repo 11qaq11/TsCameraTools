@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db/index.js'
+import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -32,7 +33,7 @@ router.post('/', async (req, res) => {
 })
 
 // List feedbacks (admin)
-router.get('/list', async (req, res) => {
+router.get('/list', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50
     const offset = parseInt(req.query.offset as string) || 0

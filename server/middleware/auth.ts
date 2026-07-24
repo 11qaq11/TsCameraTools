@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string
   avatar: string
   tenant_key: string
+  is_admin: boolean
 }
 
 declare global {
@@ -21,7 +22,7 @@ declare global {
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (config.authDebug) {
-    req.user = { id: 1, feishu_id: 'debug', name: '调试用户', email: 'debug@local', avatar: '', tenant_key: 'debug' }
+    req.user = { id: 1, feishu_id: 'debug', name: '调试用户', email: 'debug@local', avatar: '', tenant_key: 'debug', is_admin: true }
     return next()
   }
 
@@ -36,7 +37,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   try {
     const { rows } = await query<AuthUser & { session_id: string }>(
-      `SELECT u.id, u.feishu_id, u.name, u.email, u.avatar, u.tenant_key, s.id as session_id
+      `SELECT u.id, u.feishu_id, u.name, u.email, u.avatar, u.tenant_key, u.is_admin, s.id as session_id
        FROM sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.id = $1 AND s.expires_at > NOW()`,
@@ -55,10 +56,19 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       email: rows[0].email,
       avatar: rows[0].avatar,
       tenant_key: rows[0].tenant_key,
+      is_admin: rows[0].is_admin || false,
     }
 
     next()
   } catch (err) {
     res.status(500).json({ error: 'Authentication error' })
   }
+}
+
+export function adminMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user?.is_admin) {
+    res.status(403).json({ error: 'Admin access required' })
+    return
+  }
+  next()
 }

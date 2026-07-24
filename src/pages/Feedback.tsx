@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { MessageSquare, Send, CheckCircle } from 'lucide-react'
 
+const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
+const API_BASE = isElectron ? 'http://122.51.90.193' : ''
+
 const CATEGORIES = [
   { value: 'bug', label: '问题反馈' },
   { value: 'feature', label: '功能建议' },
   { value: 'other', label: '其他' },
 ]
-
-const SERVER_URL = 'http://122.51.90.193'
 
 export default function Feedback() {
   const [title, setTitle] = useState('')
@@ -23,7 +24,7 @@ export default function Feedback() {
     setSending(true)
     setError('')
     try {
-      const res = await fetch(`${SERVER_URL}/api/feedback`, {
+      const res = await fetch(`${API_BASE}/api/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), content: content.trim(), category, contact: contact.trim() }),

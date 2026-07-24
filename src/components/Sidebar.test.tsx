@@ -51,7 +51,7 @@ describe('Sidebar', () => {
         </HashRouter>
       </Provider>
     )
-    const button = screen.getByRole('button')
-    expect(button).toBeInTheDocument()
+    const buttons = screen.getAllByRole('button')
+    expect(buttons.length).toBeGreaterThan(0)
   })
 })

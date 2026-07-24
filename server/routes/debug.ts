@@ -107,9 +107,9 @@ router.post('/login', async (_req: Request, res: Response) => {
   try {
     // Ensure debug user exists
     const { rows } = await query(
-      `INSERT INTO users (feishu_id, name, email, tenant_key)
-       VALUES ('debug', '调试用户', 'debug@local', 'debug')
-       ON CONFLICT (feishu_id) DO UPDATE SET last_login_at = NOW()
+      `INSERT INTO users (feishu_id, name, email, tenant_key, is_admin)
+       VALUES ('debug', '调试用户', 'debug@local', 'debug', true)
+       ON CONFLICT (feishu_id) DO UPDATE SET last_login_at = NOW(), is_admin = true
        RETURNING id`,
     )
 
@@ -124,7 +124,7 @@ router.post('/login', async (_req: Request, res: Response) => {
 
     res.json({
       token: sessionId,
-      user: { id: userId, name: '调试用户', email: 'debug@local', feishu_id: 'debug', tenant_key: 'debug' }
+      user: { id: userId, name: '调试用户', email: 'debug@local', feishu_id: 'debug', tenant_key: 'debug', is_admin: true }
     })
   } catch (e) {
     res.status(500).json({ error: 'Debug login failed' })

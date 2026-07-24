@@ -1,6 +1,6 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Settings2 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import logoImg from './headerLogo.png'
 import { navItems } from '../config/navigation'
@@ -24,6 +24,7 @@ const pathToToolId: Record<string, string> = isElectron ? {
 
 function Sidebar() {
   const dispatch = useDispatch<AppDispatch>()
+  const navigate = useNavigate()
   const enabledTools = useSelector((state: RootState) => state.ui.enabledTools)
   const [collapsed, setCollapsed] = useState(false)
   const [showMarket, setShowMarket] = useState(false)
@@ -32,6 +33,11 @@ function Sidebar() {
   const visibleItems = isElectron
     ? allItems.filter(item => enabledTools.includes(item.id))
     : allItems
+
+  const handleNav = useCallback((path: string, toolId: string) => {
+    dispatch(switchTool(toolId))
+    navigate(path)
+  }, [dispatch, navigate])
 
   return (
     <aside
@@ -57,28 +63,25 @@ function Sidebar() {
       </div>
 
       <nav className="mt-2 flex-1 space-y-1 px-2">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.id}
-            to={item.path}
-            onClick={() => {
-              const toolId = pathToToolId[item.path] || item.id
-              dispatch(switchTool(toolId))
-            }}
-            className={() => {
-              const isActive = location.pathname === item.path
-              return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+        {visibleItems.map((item) => {
+          const isActive = location.pathname === item.path
+          const toolId = pathToToolId[item.path] || item.id
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.path, toolId)}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 w-full cursor-pointer ${
                 isActive
                   ? 'bg-[var(--color-sidebar-active)] text-red-600 glow-accent'
-                  : 'text-black hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)]'
-              } ${collapsed ? 'justify-center' : ''}`
-            }}
-            title={collapsed ? item.label : undefined}
-          >
-            {item.icon}
-            {!collapsed && <span>{item.label}</span>}
-          </NavLink>
-        ))}
+                  : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-sidebar-hover)] hover:text-[var(--color-text-primary)]'
+              } ${collapsed ? 'justify-center' : ''}`}
+              title={collapsed ? item.label : undefined}
+            >
+              {item.icon}
+              {!collapsed && <span>{item.label}</span>}
+            </button>
+          )
+        })}
       </nav>
 
       {isElectron && (
