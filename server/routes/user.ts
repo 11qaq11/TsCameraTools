@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db/index.js'
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js'
+import { authMiddleware, adminMiddleware, ownerMiddleware } from '../middleware/auth.js'
 
 const router = Router()
 
@@ -11,7 +11,7 @@ router.use(authMiddleware)
 router.get('/profile', async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, feishu_id, name, email, avatar, tenant_key, created_at, last_login_at
+      `SELECT id, feishu_id, name, email, avatar, tenant_key, role, created_at, last_login_at
        FROM users WHERE id = $1`,
       [req.user!.id]
     )
@@ -58,15 +58,45 @@ router.get('/device-history', async (req, res) => {
 })
 
 // 管理员：获取所有用户列表
-router.get('/list', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/list', adminMiddleware, async (req, res) => {
   try {
     const { rows } = await query(
-      `SELECT id, feishu_id, name, email, avatar, tenant_key, created_at, last_login_at
+      `SELECT id, feishu_id, name, email, avatar, tenant_key, role, created_at, last_login_at
        FROM users ORDER BY created_at DESC`
     )
     res.json({ users: rows })
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
+// 修改用户角色 (仅 owner/admin)
+router.put('/:id/role', adminMiddleware, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id as string)
+    const { role: newRole } = req.body as { role: string }
+
+    if (!['user', 'admin', 'owner'].includes(newRole)) {
+      return res.status(400).json({ error: 'Invalid role. Must be: user, admin, owner' })
+    }
+
+    // Owner 不可被降级（仅 owner 可操作 owner）
+    const { rows: target } = await query('SELECT role FROM users WHERE id = $1', [targetId])
+    if (target.length === 0) return res.status(404).json({ error: 'User not found' })
+
+    if (target[0].role === 'owner' && req.user!.role !== 'owner') {
+      return res.status(403).json({ error: 'Only owner can modify owner role' })
+    }
+
+    // 仅 owner 可以提升他人为 owner/admin
+    if ((newRole === 'owner' || newRole === 'admin') && req.user!.role !== 'owner') {
+      return res.status(403).json({ error: 'Only owner can grant owner/admin role' })
+    }
+
+    await query('UPDATE users SET role = $1 WHERE id = $2', [newRole, targetId])
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update role' })
   }
 })
 

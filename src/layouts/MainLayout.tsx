@@ -10,6 +10,8 @@ import SystemLogs from '../pages/admin/SystemLogs'
 import SystemConfig from '../pages/admin/SystemConfig'
 import Feedback from '../pages/Feedback'
 import FeedbackList from '../pages/admin/FeedbackList'
+import Dashboard from '../pages/admin/Dashboard'
+import ErrorLogs from '../pages/admin/ErrorLogs'
 
 const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI
 
@@ -22,12 +24,14 @@ function MainLayout() {
         <ToolBar />
         <main className="flex flex-col flex-1 overflow-hidden px-6 pt-6 pb-6 bg-[var(--color-background)]">
           <Routes>
-            <Route path="/" element={isElectron ? <Devices /> : <Navigate to="/admin/users" replace />} />
+            <Route path="/" element={isElectron ? <Devices /> : <Navigate to="/admin" replace />} />
             <Route path="/memory" element={<MemoryAnalysis />} />
+            <Route path="/admin" element={<Dashboard />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/logs" element={<SystemLogs />} />
             <Route path="/admin/config" element={<SystemConfig />} />
             <Route path="/admin/feedback" element={<FeedbackList />} />
+            <Route path="/admin/errors" element={<ErrorLogs />} />
             <Route path="/feedback" element={<Feedback />} />
           </Routes>
         </main>

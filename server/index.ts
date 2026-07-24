@@ -19,6 +19,8 @@ import debugRoutes from './routes/debug.js'
 import memoryRoutes from './routes/memory.js'
 import userRoutes from './routes/user.js'
 import feedbackRoutes from './routes/feedback.js'
+import errorLogsRoutes from './routes/error-logs.js'
+import dashboardRoutes from './routes/dashboard.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -55,6 +57,8 @@ app.use('/api/debug', debugRoutes)
 app.use('/api/memory', memoryRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/feedback', feedbackRoutes)
+app.use('/api/error-logs', errorLogsRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })

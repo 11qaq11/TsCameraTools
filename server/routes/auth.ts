@@ -81,10 +81,10 @@ router.get('/feishu/callback', async (req, res) => {
 
     logger.info({ feishuId, name, tenantKey }, 'User authenticated')
 
-    // 4. UPSERT 用户记录
+    // 4. UPSERT 用户记录 (新用户默认 role='user', 老用户保留现有 role)
     const { rows: userRows } = await query<{ id: number }>(
-      `INSERT INTO users (feishu_id, name, email, avatar, tenant_key, last_login_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO users (feishu_id, name, email, avatar, tenant_key, role, last_login_at)
+       VALUES ($1, $2, $3, $4, $5, 'user', NOW())
        ON CONFLICT (feishu_id) DO UPDATE SET
          name = EXCLUDED.name,
          email = EXCLUDED.email,

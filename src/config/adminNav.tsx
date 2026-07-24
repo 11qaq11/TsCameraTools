@@ -1,7 +1,14 @@
-import { Users, ScrollText, Settings, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Users, MessageSquare, ScrollText, Bug, Settings } from 'lucide-react'
 import type { NavItem } from '../types'
 
 export const adminNavItems: NavItem[] = [
+  {
+    id: 'admin-dashboard',
+    label: '仪表盘',
+    icon: <LayoutDashboard size={20} />,
+    path: '/admin',
+    group: '管理',
+  },
   {
     id: 'admin-users',
     label: '用户管理',
@@ -21,6 +28,13 @@ export const adminNavItems: NavItem[] = [
     label: '操作日志',
     icon: <ScrollText size={20} />,
     path: '/admin/logs',
+    group: '管理',
+  },
+  {
+    id: 'admin-errors',
+    label: '错误日志',
+    icon: <Bug size={20} />,
+    path: '/admin/errors',
     group: '管理',
   },
   {

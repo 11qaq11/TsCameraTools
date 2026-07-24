@@ -16,9 +16,11 @@ const pathToToolId: Record<string, string> = isElectron ? {
   '/memory': 'memory',
   '/feedback': 'feedback',
 } : {
+  '/admin': 'admin-dashboard',
   '/admin/users': 'admin-users',
   '/admin/feedback': 'admin-feedback',
   '/admin/logs': 'admin-logs',
+  '/admin/errors': 'admin-errors',
   '/admin/config': 'admin-config',
 }
 
