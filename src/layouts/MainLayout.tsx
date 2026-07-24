@@ -1,10 +1,9 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, Navigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import Header from '../components/Header'
 import ToolBar from '../components/ToolBar'
 import { LogViewer } from '../components/LogViewer'
 import Devices from '../pages/Devices'
-import DevicesWeb from '../pages/DevicesWeb'
 import MemoryAnalysis from '../pages/MemoryAnalysis'
 import UserManagement from '../pages/admin/UserManagement'
 import SystemLogs from '../pages/admin/SystemLogs'
@@ -24,7 +23,7 @@ function MainLayout() {
         <ToolBar />
         <main className="flex flex-col flex-1 overflow-hidden px-6 pt-6 pb-6 bg-[var(--color-background)]">
           <div className={`flex flex-col flex-1 min-h-0 ${location.pathname === '/' ? '' : 'hidden'}`}>
-            {isElectron ? <Devices /> : <DevicesWeb />}
+            {isElectron ? <Devices /> : <Navigate to="/admin/users" replace />}
           </div>
           <div className={`relative flex flex-col flex-1 min-h-0 ${location.pathname === '/memory' ? '' : 'hidden'}`}>
             <MemoryAnalysis />
